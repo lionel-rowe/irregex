@@ -1,0 +1,25 @@
+{
+	"lock": false,
+	"tasks": {
+		// "cli": "deno run -A src/cli/main.ts",
+		// "test": "deno test -A --watch tests"
+	},
+	"imports": {
+		"std/": "https://deno.land/std@0.208.0/",
+		// "cheerio": "https://esm.sh/v131/cheerio@1.0.0-rc.12",
+		// "cliffy/": "https://deno.land/x/cliffy@v1.0.0-rc.3/",
+		// "xml-formatter": "https://esm.sh/v135/xml-formatter@3.6.2"
+	},
+	"fmt": {
+		"semiColons": false,
+		"useTabs": true,
+		"lineWidth": 120,
+		"indentWidth": 4,
+		"singleQuote": true,
+		"proseWrap": "preserve",
+		"exclude": []
+	},
+	"compilerOptions": { "strict": true },
+	"lint": { "rules": { "tags": ["recommended"] } },
+	"exclude": []
+}
