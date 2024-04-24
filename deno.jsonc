@@ -6,6 +6,7 @@
 	},
 	"imports": {
 		"std/": "https://deno.land/std@0.208.0/",
+		"irregex": "./mod.ts"
 		// "cheerio": "https://esm.sh/v131/cheerio@1.0.0-rc.12",
 		// "cliffy/": "https://deno.land/x/cliffy@v1.0.0-rc.3/",
 		// "xml-formatter": "https://esm.sh/v135/xml-formatter@3.6.2"
