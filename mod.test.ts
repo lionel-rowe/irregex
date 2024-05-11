@@ -1,52 +1,39 @@
-import { CombinedMatcher, Irregex } from 'irregex'
+import { CombinedMatcher, Irregex } from './irregex.ts'
 import { assertEquals } from 'std/assert/mod.ts'
-import anchorme from 'https://esm.sh/v135/anchorme@3.0.8'
+import { AnchorMe } from './matchers/anchorme.ts'
+import { DateMatcher } from './matchers/date.ts'
+import { Ipv4Matcher } from './matchers/ipv4.ts'
+import { WordMatcher } from './matchers/word.ts'
 
-class WordMatcher extends Irregex {
-	segmenter: Intl.Segmenter
+Deno.test('DateMatcher', async (t) => {
+	await t.step('OK, hyphens', () => {
+		assertEquals(new DateMatcher().test('2001-01-01'), true)
+	})
+	await t.step('OK, slashes', () => {
+		assertEquals(new DateMatcher().test('2002/02/02'), true)
+	})
 
-	constructor(locale: string) {
-		super()
-		this.segmenter = new Intl.Segmenter(locale, { granularity: 'word' })
-	}
+	await t.step('no match, mixed ', () => {
+		assertEquals(new DateMatcher().test('2003-03/03'), false)
+	})
+	await t.step('no match, day segment too long', () => {
+		assertEquals(new DateMatcher().test('2004-04-004'), false)
+	})
+	await t.step('no match, year segment too long', () => {
+		assertEquals(new DateMatcher().test('20005-05-05'), false)
+	})
 
-	getMatch(str: string) {
-		return this.fromIter(str, function* () {
-			for (const segmentData of this.segmenter.segment(str)) {
-				if (segmentData.isWordLike && /\p{L}/u.test(segmentData.segment)) {
-					const arr: [string] = [segmentData.segment]
+	await t.step('doesn’t exist', () => {
+		assertEquals(new DateMatcher().test('1999-99-99'), false)
+	})
 
-					yield Object.assign(arr, {
-						...segmentData,
-						groups: {
-							abbr: segmentData.segment.match(/^.{0,3}/u)![0],
-						},
-					})
-				}
-			}
-		})
-	}
-}
-
-class Ipv4Matcher extends Irregex {
-	re = /(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/g
-
-	constructor() {
-		super()
-		this.trackLastIndex = [this.re]
-	}
-
-	getMatch(str: string): RegExpExecArray | null {
-		while (true) {
-			const m = this.re.exec(str)
-			if (m == null) return null
-
-			if (m.slice(1).every((x) => Number(x) < 256)) {
-				return m
-			}
-		}
-	}
-}
+	await t.step('doesn’t exist, not a leapyear', () => {
+		assertEquals(new DateMatcher().test('1999-02-29'), false)
+	})
+	await t.step('OK, leapyear', () => {
+		assertEquals(new DateMatcher().test('2000-02-29'), true)
+	})
+})
 
 Deno.test('readme', async (t) => {
 	await t.step('word matcher', async (t) => {
@@ -237,23 +224,42 @@ Deno.test('parity with RegExp', async (t) => {
 	})
 })
 
-function list(input: string): { start: number; end: number; string: string }[] {
-	return anchorme.list(input, false)
-}
+Deno.test('AnchorMe', async (t) => {
+	const input = `
+		http://www.google.com
+		wordpress.com/post.php?p=112
+		not a link
+		email@ex.com
+		mailto:email@ex.com 
+		file:///c:/directory/somefile.zip
+	`
 
-Deno.test('CombinedMatcher', async (t) => {
-	class AnchorMe extends Irregex {
-		getMatch(str: string) {
-			return this.fromIter(str, () =>
-				list(str).map((x) =>
-					Object.assign(
-						[x.string] as [string],
-						{ index: x.start, input: str },
-					)
-				))
-		}
+	await t.step('all reasons', () => {
+		const actual = [...new AnchorMe()[Symbol.matchAll](input)].flat()
+		assertEquals(actual, [
+			'http://www.google.com',
+			'wordpress.com/post.php?p=112',
+			'email@ex.com',
+			'mailto:email@ex.com',
+			'file:///c:/directory/somefile.zip',
+		])
+	})
+
+	for (
+		const { reason, expect } of [
+			{ reason: 'url' as const, expect: ['http://www.google.com', 'wordpress.com/post.php?p=112'] },
+			{ reason: 'email' as const, expect: ['email@ex.com', 'mailto:email@ex.com'] },
+			{ reason: 'file' as const, expect: ['file:///c:/directory/somefile.zip'] },
+		]
+	) {
+		await t.step(reason, () => {
+			const actual = [...new AnchorMe([reason])[Symbol.matchAll](input)].flat()
+			assertEquals(actual, expect)
+		})
 	}
+})
 
+Deno.test('CombinedMatcher', () => {
 	class NumberMatcher extends Irregex {
 		constructor(public min: number, public max: number) {
 			super()
