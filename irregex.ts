@@ -1,3 +1,7 @@
+/**
+ * A contract fulfilled by both `RegExp`s and `Irregex`s. The `Irregex` class implements these properties and methods of
+ * the `RegExp` interface in a way that aims for compatibility with `RegExp`.
+ */
 export type Matcher = Pick<
 	RegExp,
 	| 'exec'
@@ -11,7 +15,21 @@ export type Matcher = Pick<
 	| typeof Symbol.split
 >
 
+/**
+ * An abstract class that implements the `Matcher` contract, making it compatible with most functions that expect a
+ * `RegExp`.
+ */
 export abstract class Irregex<T = unknown> implements Matcher {
+	/**
+	 * At minimum, derived `Irregex` classes must implement the `getMatch` method. The `getMatch` method is stateful and
+	 * relies on the `lastIndex` property.
+	 *
+	 * You can also use the `fromIter` helper, which caches iterable results for a given input string and handles
+	 * reading of `lastIndex`.
+	 *
+	 * @param str The input string
+	 * @returns A `RegExpExecArray` or `null`
+	 */
 	abstract getMatch(str: string): (RegExpExecArray & T) | null
 
 	readonly flags = 'g'
@@ -42,6 +60,14 @@ export abstract class Irregex<T = unknown> implements Matcher {
 		iterated: (RegExpExecArray & T)[]
 		iterator: Iterator<RegExpExecArray & T>
 	}
+	/**
+	 * Convenience method for converting an iterator function to a match getter suitable for use with `getMatch`.
+	 * Caches iterable results for a given input string and handles reading of `lastIndex`.
+	 *
+	 * @param str The input string
+	 * @param getter A function that returns an iterable of matches
+	 * @returns A `RegExpExecArray` or `null`
+	 */
 	fromIter(str: string, getter: (this: this) => Iterable<RegExpExecArray & T>): (RegExpExecArray & T) | null {
 		if (this.#lastCached?.input !== str) {
 			const iterator = getter.call(this)[Symbol.iterator]()
@@ -185,6 +211,9 @@ export abstract class Irregex<T = unknown> implements Matcher {
 	}
 }
 
+/**
+ * Combine multiple matchers (`RegExp`s, `Irregex`es) to iterate through them in sync.
+ */
 export class CombinedMatcher extends Irregex {
 	childMatchers: Matcher[]
 
