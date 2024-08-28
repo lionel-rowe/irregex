@@ -18,7 +18,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 	readonly global = true
 
 	#lastIndex = 0
-	get lastIndex() {
+	get lastIndex(): number {
 		return this.#lastIndex
 	}
 	set lastIndex(val: number) {
@@ -30,7 +30,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 
 	trackLastIndex?: { lastIndex: number }[]
 
-	exec(str: string) {
+	exec(str: string): (RegExpExecArray & T) | null {
 		const match = this.getMatch(str)
 		this.lastIndex = match ? match.index + match[0].length : 0
 
@@ -42,7 +42,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 		iterated: (RegExpExecArray & T)[]
 		iterator: Iterator<RegExpExecArray & T>
 	}
-	fromIter(str: string, getter: (this: this) => Iterable<RegExpExecArray & T>) {
+	fromIter(str: string, getter: (this: this) => Iterable<RegExpExecArray & T>): (RegExpExecArray & T) | null {
 		if (this.#lastCached?.input !== str) {
 			const iterator = getter.call(this)[Symbol.iterator]()
 
@@ -65,7 +65,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 		}
 	}
 
-	*[Symbol.matchAll](str: string) {
+	*[Symbol.matchAll](str: string): Generator<RegExpExecArray & T, undefined, undefined> {
 		while (true) {
 			const result = this.exec(str)
 			if (result == null) break
@@ -76,7 +76,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 		}
 	}
 
-	[Symbol.match](str: string) {
+	[Symbol.match](str: string): (string[] & { 0: string }) | null {
 		const all = [...this[Symbol.matchAll](str)].map(([x]) => x)
 		return all.length ? all as string[] & { 0: string } : null
 	}
@@ -124,7 +124,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 	}
 
 	// deno-lint-ignore no-explicit-any
-	[Symbol.replace](str: string, replacer: string | ((substring: string, ...args: any[]) => string)) {
+	[Symbol.replace](str: string, replacer: string | ((substring: string, ...args: any[]) => string)): string {
 		const out: string[] = []
 
 		const replace = typeof replacer === 'string' ? this.#replaceValueToReplacer(replacer) : replacer
@@ -148,11 +148,11 @@ export abstract class Irregex<T = unknown> implements Matcher {
 		return out.join('') || str
 	}
 
-	test(str: string) {
+	test(str: string): boolean {
 		return this.exec(str) != null
 	}
 
-	[Symbol.search](str: string) {
+	[Symbol.search](str: string): number {
 		for (const match of this[Symbol.matchAll](str)) {
 			this.lastIndex = 0
 			return match.index!
@@ -161,7 +161,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 		return -1
 	}
 
-	[Symbol.split](str: string, limit?: number) {
+	[Symbol.split](str: string, limit?: number): string[] {
 		const out = ['']
 
 		const matches = [...this[Symbol.matchAll](str)]
@@ -197,7 +197,7 @@ export class CombinedMatcher extends Irregex {
 		this.trackLastIndex = this.childMatchers
 	}
 
-	getMatch(str: string) {
+	getMatch(str: string): RegExpExecArray {
 		const nexts = this.childMatchers.map((matcher) => matcher.exec(str)).filter((x) => x != null)
 
 		nexts.sort((a, b) => a!.index - b!.index)

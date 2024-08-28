@@ -1,5 +1,5 @@
 import { CombinedMatcher, Irregex } from './irregex.ts'
-import { assertEquals } from 'std/assert/mod.ts'
+import { assertEquals } from '@std/assert'
 import { AnchorMe } from './matchers/anchorme.ts'
 import { DateMatcher } from './matchers/date.ts'
 import { Ipv4Matcher } from './matchers/ipv4.ts'
