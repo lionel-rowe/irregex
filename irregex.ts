@@ -46,7 +46,11 @@ export abstract class Irregex<T = unknown> implements Matcher {
 		}
 	}
 
-	trackLastIndex?: { lastIndex: number }[]
+	/**
+	 * A list of matchers that should have their `lastIndex` property kept in sync with the parent `Irregex`'s
+	 *  `lastIndex` property. Useful for keeping internally-used regexes (or other matchers) in sync.
+	 */
+	trackLastIndex?: Pick<Matcher, 'lastIndex'>[]
 
 	exec(str: string): (RegExpExecArray & T) | null {
 		const match = this.getMatch(str)
