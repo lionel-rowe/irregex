@@ -1,27 +1,27 @@
 name: Publish
 
 on:
-  push:
-    branches:
-      - main
+    push:
+        branches:
+            - main
 
 jobs:
-  publish:
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      id-token: write # The OIDC ID token is used for authentication with JSR.
-    steps:
-      - name: Clone repo
-        uses: actions/checkout@v4
+    publish:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            id-token: write # The OIDC ID token is used for authentication with JSR.
+        steps:
+            - name: Clone repo
+              uses: actions/checkout@v4
 
-      - name: Set up Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: latest
+            - name: Set up Deno
+              uses: denoland/setup-deno@v1
+              with:
+                  deno-version: latest
 
-      - name: Test
-        run: deno task test
+            - name: Test
+              run: deno task test
 
-      - name: Publish to JSR
-        run: deno publish
+            - name: Publish to JSR
+              run: deno publish

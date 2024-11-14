@@ -1,5 +1,5 @@
 import { CombinedMatcher, Irregex } from './irregex.ts'
-import { assertEquals } from '@std/assert'
+import { assertEquals, assertInstanceOf, unreachable } from '@std/assert'
 import { AnchorMe } from './matchers/anchorme.ts'
 import { DateMatcher } from './matchers/date.ts'
 import { Ipv4Matcher } from './matchers/ipv4.ts'
@@ -355,4 +355,48 @@ Deno.test('never match', async (t) => {
 			}
 		})
 	}
+})
+
+Deno.test('throw match', () => {
+	class ThrowMatcherError extends Error {}
+
+	class ThrowMatcher extends Irregex {
+		#re = /./g
+		override trackLastIndex = [this.#re]
+
+		override getMatch(str: string) {
+			if (this.lastIndex) throw new ThrowMatcherError()
+			return this.#re.exec(str)
+		}
+	}
+
+	const matcher = new ThrowMatcher()
+	const str = 'abc'
+
+	try {
+		void [...matcher[Symbol.matchAll](str)]
+
+		unreachable()
+	} catch (e) {
+		assertInstanceOf(e, ThrowMatcherError)
+		assertEquals(matcher.lastIndex, 0)
+	}
+})
+
+Deno.test('zero-length matches advance lastIndex', () => {
+	class ZeroLengthMatcher extends Irregex {
+		#re = /\b/g
+		override trackLastIndex = [this.#re]
+
+		override getMatch(str: string) {
+			return this.#re.exec(str)
+		}
+	}
+
+	const matcher = new ZeroLengthMatcher()
+	const str = 'abc'
+
+	void [...matcher[Symbol.matchAll](str)]
+
+	assertEquals(matcher.lastIndex, 0)
 })

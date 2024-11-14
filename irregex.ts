@@ -54,7 +54,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 
 	exec(str: string): (RegExpExecArray & T) | null {
 		const match = this.getMatch(str)
-		this.lastIndex = match ? match.index + match[0].length : 0
+		this.lastIndex = match ? match.index + (match[0].length || 1) : 0
 
 		return match
 	}
@@ -64,6 +64,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 		iterated: (RegExpExecArray & T)[]
 		iterator: Iterator<RegExpExecArray & T>
 	}
+
 	/**
 	 * Convenience method for converting an iterator function to a match getter suitable for use with `getMatch`.
 	 * Caches iterable results for a given input string and handles reading of `lastIndex`.
@@ -96,13 +97,16 @@ export abstract class Irregex<T = unknown> implements Matcher {
 	}
 
 	*[Symbol.matchAll](str: string): Generator<RegExpExecArray & T, undefined, undefined> {
-		while (true) {
-			const result = this.exec(str)
-			if (result == null) break
-
-			yield result
-
-			this.lastIndex = result.index + result[0].length
+		try {
+			while (true) {
+				const result = this.exec(str)
+				if (result == null) break
+				yield result
+			}
+		} catch (e) {
+			throw e
+		} finally {
+			this.lastIndex = 0
 		}
 	}
 
@@ -185,7 +189,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 	[Symbol.search](str: string): number {
 		for (const match of this[Symbol.matchAll](str)) {
 			this.lastIndex = 0
-			return match.index!
+			return match.index
 		}
 
 		return -1
