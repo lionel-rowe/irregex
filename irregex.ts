@@ -15,6 +15,8 @@ export type Matcher = Pick<
 	| typeof Symbol.split
 >
 
+const replaceValueRe = () => /\$(?:([$&`'])|(\d{1,2})|<([^>]*)>)/g
+
 /**
  * An abstract class that implements the `Matcher` contract, making it compatible with most functions that expect a
  * `RegExp`.
@@ -40,6 +42,9 @@ export abstract class Irregex<T = unknown> implements Matcher {
 		return this.#lastIndex
 	}
 	set lastIndex(val: number) {
+		// coerce to positive int 0..2147483647
+		val = Math.max(0, val | 0)
+
 		this.#lastIndex = val
 		for (const matcher of this.trackLastIndex ?? []) {
 			matcher.lastIndex = val
@@ -54,8 +59,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 
 	exec(str: string): (RegExpExecArray & T) | null {
 		const match = this.getMatch(str)
-		this.lastIndex = match ? match.index + (match[0].length || 1) : 0
-
+		this.lastIndex = match ? match.index + match[0].length : 0
 		return match
 	}
 
@@ -97,25 +101,34 @@ export abstract class Irregex<T = unknown> implements Matcher {
 	}
 
 	*[Symbol.matchAll](str: string): Generator<RegExpExecArray & T, undefined, undefined> {
-		try {
-			while (true) {
-				const result = this.exec(str)
-				if (result == null) break
-				yield result
+		using _ = this.#resetLastIndex(this.lastIndex)
+
+		while (true) {
+			const match = this.exec(str)
+			if (match == null) return
+
+			// prevent infinite loops on zero-length matches
+			if (match[0] === '') {
+				this.lastIndex = this.#advanceStringIndex(str, this.lastIndex)
 			}
-		} catch (e) {
-			throw e
-		} finally {
-			this.lastIndex = 0
+
+			yield match
 		}
 	}
 
 	[Symbol.match](str: string): (string[] & { 0: string }) | null {
+		using _ = this.#resetLastIndex(0)
+		this.lastIndex = 0
+
 		const all = [...this[Symbol.matchAll](str)].map(([x]) => x)
 		return all.length ? all as string[] & { 0: string } : null
 	}
 
 	#replaceValueToReplacer(replaceValue: string) {
+		// fast paths for common cases
+		if (replaceValue === '') return () => ''
+		if (!replaceValueRe().test(replaceValue)) return () => replaceValue
+
 		return (substring: string, ...args: unknown[]) => {
 			// function replacer(match, p1, p2, /* ..., */ pN, offset, string, groups)
 			const offsetIdx = args.findIndex((x) => typeof x === 'number')!
@@ -125,7 +138,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 			const groups = args[offsetIdx + 2] as Record<string, string> | undefined
 
 			return replaceValue.replaceAll(
-				/\$(?:([$&`'])|(\d{1,2})|<([^>]*)>)/g,
+				replaceValueRe(),
 				(m, sym, d, ident) => {
 					switch (sym) {
 						// $$	Inserts a "$".
@@ -159,27 +172,28 @@ export abstract class Irregex<T = unknown> implements Matcher {
 
 	// deno-lint-ignore no-explicit-any
 	[Symbol.replace](str: string, replacer: string | ((substring: string, ...args: any[]) => string)): string {
-		const out: string[] = []
-
-		const replace = typeof replacer === 'string' ? this.#replaceValueToReplacer(replacer) : replacer
+		using _ = this.#resetLastIndex(0)
+		this.lastIndex = 0
 
 		const matches = [...this[Symbol.matchAll](str)]
+		if (!matches.length) return str
+
+		const out: string[] = []
+		const replace = typeof replacer === 'string' ? this.#replaceValueToReplacer(replacer) : replacer
+
+		out.push(str.slice(0, matches[0]?.index))
 
 		for (const [idx, match] of matches.entries()) {
-			if (idx === 0) {
-				out.push(str.slice(0, match.index))
-			}
-
 			// function replacer(match, p1, p2, /* …, */ pN, offset, string, groups)
 			out.push(replace(match[0], ...match.slice(1), match.index, str, match.groups))
 
 			out.push(str.slice(
-				match[0].length + match.index,
+				match.index + match[0].length,
 				matches[idx + 1]?.index,
 			))
 		}
 
-		return out.join('') || str
+		return out.join('')
 	}
 
 	test(str: string): boolean {
@@ -187,35 +201,72 @@ export abstract class Irregex<T = unknown> implements Matcher {
 	}
 
 	[Symbol.search](str: string): number {
+		using _ = this.#resetLastIndex(this.lastIndex)
+		this.lastIndex = 0
+
 		for (const match of this[Symbol.matchAll](str)) {
-			this.lastIndex = 0
 			return match.index
 		}
 
 		return -1
 	}
 
+	#resetLastIndex(to: number) {
+		return {
+			[Symbol.dispose]: () => this.lastIndex = to,
+		}
+	}
+
+	#advanceStringIndex(referenceStr: string, index: number) {
+		if (index + 1 >= referenceStr.length) return index + 1
+		const cp = referenceStr.codePointAt(index)!
+		return index + (cp > 0xFFFF ? 2 : 1)
+	}
+
+	#execStickily(str: string): (RegExpExecArray & T) | null {
+		const i = this.lastIndex
+		let match = this.getMatch(str)
+		if (match?.index !== i) match = null
+		this.lastIndex = match ? match.index + match[0].length : 0
+		return match
+	}
+
+	// https://tc39.es/ecma262/multipage/text-processing.html#sec-regexp.prototype-%symbol.split%
 	[Symbol.split](str: string, limit?: number): string[] {
-		const out = ['']
+		using _ = this.#resetLastIndex(this.lastIndex)
+		this.lastIndex = 0
 
-		const matches = [...this[Symbol.matchAll](str)]
+		const out: string[] = []
 
-		for (const [idx, match] of matches.entries()) {
-			for (const m of match.slice(1)) {
-				out.push(m)
-			}
+		const lim = (typeof limit === 'undefined' ? -1 : limit) >>> 0
+		if (lim === 0) return out
 
-			out.push(str.slice(
-				match[0].length + match.index,
-				matches[idx + 1]?.index,
-			))
+		if (str === '') {
+			return this.#execStickily(str) == null ? [str] : []
 		}
 
-		if (out.length === 1) out[0] = str
+		let p = 0
+		for (let q = p; q < str.length;) {
+			this.lastIndex = q
+			const z = this.#execStickily(str)
+			if (z == null) {
+				q = this.#advanceStringIndex(str, q)
+			} else {
+				const e = Math.min(this.lastIndex, str.length)
+				if (e === p) {
+					q = this.#advanceStringIndex(str, q)
+				} else {
+					for (const match of [str.slice(p, q), ...z.slice(1)]) {
+						out.push(match)
+						if (out.length === lim) return out
+					}
+					q = p = e
+				}
+			}
+		}
 
-		// https://tc39.es/ecma262/multipage/text-processing.html#sec-string.prototype.split
-		const lim = (typeof limit === 'undefined' ? -1 : limit) >>> 0
-		return out.slice(0, lim)
+		out.push(str.slice(p))
+		return out
 	}
 }
 

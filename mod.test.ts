@@ -1,11 +1,12 @@
-import { CombinedMatcher, Irregex } from './irregex.ts'
+import { CombinedMatcher, Irregex, Matcher } from './irregex.ts'
 import { assertEquals, assertInstanceOf, unreachable } from '@std/assert'
 import { AnchorMe } from './matchers/anchorme.ts'
 import { DateMatcher } from './matchers/date.ts'
 import { Ipv4Matcher } from './matchers/ipv4.ts'
 import { WordMatcher } from './matchers/word.ts'
+import { RegexWrapper } from './_testUtils.ts'
 
-Deno.test('DateMatcher', async (t) => {
+Deno.test(DateMatcher.name, async (t) => {
 	await t.step('OK, hyphens', () => {
 		assertEquals(new DateMatcher().test('2001-01-01'), true)
 	})
@@ -36,8 +37,8 @@ Deno.test('DateMatcher', async (t) => {
 })
 
 Deno.test('readme', async (t) => {
-	await t.step('word matcher', async (t) => {
-		await t.step('replace', () => {
+	await t.step(WordMatcher.name, async (t) => {
+		await t.step(Symbol.replace.description!, () => {
 			const matcher = new WordMatcher('en-US')
 			const input = 'Monday, Tuesday, Wednesday, Thursday, Friday, Saturday, Sunday'
 			const replacer = '($<abbr>)'
@@ -47,7 +48,7 @@ Deno.test('readme', async (t) => {
 				assertEquals(matcher[Symbol.replace](input, replacer), expected)
 			}
 		})
-		await t.step('match', () => {
+		await t.step(Symbol.match.description!, () => {
 			const matcher = new WordMatcher('zh-CN')
 			const input = '此地无银三百两'
 			const expected = ['此地', '无', '银', '三百', '两']
@@ -58,7 +59,7 @@ Deno.test('readme', async (t) => {
 		})
 	})
 
-	await t.step('IPv4 matcher', async (t) => {
+	await t.step(Ipv4Matcher.name, async (t) => {
 		await t.step('match', () => {
 			const matcher = new Ipv4Matcher()
 			const input = '192.168.1.1\n999.999.999.999\n255.255.255.255'
@@ -70,7 +71,7 @@ Deno.test('readme', async (t) => {
 		})
 	})
 
-	await t.step('CombinedMatcher', async (t) => {
+	await t.step(CombinedMatcher.name, async (t) => {
 		await t.step('different kinds of matchers', () => {
 			const matcher = new CombinedMatcher([
 				new WordMatcher('en-US'),
@@ -98,133 +99,7 @@ Deno.test('readme', async (t) => {
 	})
 })
 
-Deno.test('parity with RegExp', async (t) => {
-	class RegexWrapper extends Irregex {
-		re: RegExp
-
-		constructor(re: RegExp) {
-			super()
-			this.re = new RegExp(re.source, re.flags)
-			this.trackLastIndex = [this.re]
-		}
-
-		getMatch(str: string) {
-			return this.re.exec(str)
-		}
-	}
-
-	await t.step('replace', async (t) => {
-		await t.step('named group', () => {
-			const re = /(?<id>(a))(b)/g
-			const wrapped = new RegexWrapper(re)
-			const str = 'ab!ab!ab'
-			const replacement = "[$1$2$`$'$<id>$<no>$&$$]"
-
-			for (let i = 0; i < 2; ++i) {
-				assertEquals(
-					re[Symbol.replace](str, replacement),
-					wrapped[Symbol.replace](str, replacement),
-				)
-			}
-		})
-
-		await t.step('no named group', () => {
-			const re = /((a))(b)/g
-			const wrapped = new RegexWrapper(re)
-			const str = 'ab!ab!ab'
-			const replacement = "[$1$2$`$'$<id>$<no>$&$$]"
-
-			for (let i = 0; i < 10; ++i) {
-				assertEquals(
-					re[Symbol.replace](str, replacement),
-					wrapped[Symbol.replace](str, replacement),
-				)
-			}
-		})
-	})
-
-	await t.step('split', () => {
-		const re = /(?<id>(a))(b)/g
-		const wrapped = new RegexWrapper(re)
-		const str = 'ab!'.repeat(1000)
-
-		for (const limit of [undefined, null, 'a', '9', 0, 1, 100, 10000, -1, -Infinity, Infinity, NaN]) {
-			for (let i = 0; i < 10; ++i) {
-				assertEquals(
-					wrapped[Symbol.split](str, limit as number),
-					re[Symbol.split](str, limit as number),
-				)
-			}
-		}
-	})
-
-	await t.step('match', () => {
-		const re = /(?<id>(a))(b)/g
-		const wrapped = new RegexWrapper(re)
-		const str = 'ab!ab!ab'
-
-		for (let i = 0; i < 10; ++i) {
-			assertEquals(
-				wrapped[Symbol.match](str),
-				re[Symbol.match](str),
-			)
-		}
-	})
-
-	await t.step('search', () => {
-		const re = /(?<id>(a))(b)/g
-		const wrapped = new RegexWrapper(re)
-		const str = 'ab!ab!ab'
-
-		for (let i = 0; i < 10; ++i) {
-			assertEquals(
-				wrapped[Symbol.search](str),
-				re[Symbol.search](str),
-			)
-		}
-	})
-
-	await t.step('matchAll', () => {
-		const re = /(?<id>(a))(b)/g
-		const wrapped = new RegexWrapper(re)
-		const str = 'ab!ab!ab'
-
-		for (let i = 0; i < 10; ++i) {
-			assertEquals(
-				[...wrapped[Symbol.matchAll](str)],
-				[...re[Symbol.matchAll](str)],
-			)
-		}
-	})
-
-	await t.step('test', () => {
-		const re = /(?<id>(a))(b)/g
-		const wrapped = new RegexWrapper(re)
-		const str = 'ab!ab!ab'
-
-		for (let i = 0; i < 10; ++i) {
-			assertEquals(
-				wrapped.test(str),
-				re.test(str),
-			)
-		}
-	})
-
-	await t.step('exec', () => {
-		const re = /(?<id>(a))(b)/g
-		const wrapped = new RegexWrapper(re)
-		const str = 'ab!ab!ab'
-
-		for (let i = 0; i < 10; ++i) {
-			assertEquals(
-				wrapped.exec(str),
-				re.exec(str),
-			)
-		}
-	})
-})
-
-Deno.test('AnchorMe', async (t) => {
+Deno.test(AnchorMe.name, async (t) => {
 	const input = `
 		http://www.google.com
 		wordpress.com/post.php?p=112
@@ -259,7 +134,7 @@ Deno.test('AnchorMe', async (t) => {
 	}
 })
 
-Deno.test('CombinedMatcher', () => {
+Deno.test(CombinedMatcher.name, () => {
 	class NumberMatcher extends Irregex {
 		constructor(public min: number, public max: number) {
 			super()
@@ -383,20 +258,89 @@ Deno.test('throw match', () => {
 	}
 })
 
-Deno.test('zero-length matches advance lastIndex', () => {
-	class ZeroLengthMatcher extends Irregex {
-		#re = /\b/g
-		override trackLastIndex = [this.#re]
+Deno.test('zero-length matches', async (t) => {
+	const re = () => /(?:)/g
 
-		override getMatch(str: string) {
-			return this.#re.exec(str)
+	async function assertRegExpParity(t: Deno.TestContext, fn: (matcher: Matcher) => void) {
+		for (const matcher of [new RegexWrapper(re()), re()]) {
+			await t.step(matcher.constructor.name, () => {
+				fn(matcher)
+			})
 		}
 	}
 
-	const matcher = new ZeroLengthMatcher()
-	const str = 'abc'
+	await t.step(`advance lastIndex for ${Symbol.matchAll.description!}`, async (t) => {
+		await assertRegExpParity(t, (matcher) => {
+			const str = 'abc'
 
-	void [...matcher[Symbol.matchAll](str)]
+			// this will form an infinite loop if lastIndex is not advanced
+			const matches = [...matcher[Symbol.matchAll](str)].flat()
+			assertEquals(matches, ['', '', '', ''])
+			assertEquals(matcher.lastIndex, 0)
+		})
+	})
 
-	assertEquals(matcher.lastIndex, 0)
+	await t.step(`doesn't advance lastIndex for ${Irregex.prototype.exec.name}`, async (t) => {
+		await assertRegExpParity(t, (matcher) => {
+			const str = 'abc'
+
+			const result = matcher.exec(str)
+			assertEquals(result?.[0], '')
+			assertEquals(result?.index, 0)
+			assertEquals(matcher.lastIndex, 0)
+		})
+	})
+
+	await t.step(`doesn't advance lastIndex for ${Irregex.prototype.test.name}`, async (t) => {
+		await assertRegExpParity(t, (matcher) => {
+			const str = 'abc'
+
+			const result = matcher.test(str)
+			assertEquals(result, true)
+			assertEquals(matcher.lastIndex, 0)
+		})
+	})
+
+	await t.step(Symbol.search.description!, async (t) => {
+		await assertRegExpParity(t, (matcher) => {
+			const str = 'abc'
+
+			const n = matcher[Symbol.search](str)
+			assertEquals(n, 0)
+			assertEquals(matcher.lastIndex, 0)
+		})
+	})
+
+	await t.step(Symbol.match.description!, async (t) => {
+		await assertRegExpParity(t, (matcher) => {
+			const str = 'abc'
+
+			// this will form an infinite loop if lastIndex is not advanced
+			const matches = matcher[Symbol.match](str)
+			assertEquals(matches, ['', '', '', ''])
+			assertEquals(matcher.lastIndex, 0)
+		})
+	})
+
+	await t.step(Symbol.split.description!, async (t) => {
+		await assertRegExpParity(t, (matcher) => {
+			const str = 'abc'
+
+			// this will form an infinite loop if lastIndex is not advanced
+			const matches = matcher[Symbol.split](str)
+			assertEquals(matches, ['a', 'b', 'c'])
+			assertEquals(matcher.lastIndex, 0)
+		})
+	})
+
+	await t.step(Symbol.replace.description!, async (t) => {
+		await assertRegExpParity(t, (matcher) => {
+			const str = 'abc'
+
+			// this will form an infinite loop if lastIndex is not advanced
+			const matches = matcher[Symbol.replace](str, 'X')
+			assertEquals(matches, 'XaXbXcX')
+			assertEquals(matcher.lastIndex, 0)
+		})
+	})
 })
