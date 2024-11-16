@@ -1,9 +1,9 @@
-import { CombinedMatcher, Irregex, Matcher } from './irregex.ts'
+import { CombinedMatcher, Irregex, Matcher } from '../src/irregex.ts'
 import { assertEquals, assertInstanceOf, unreachable } from '@std/assert'
-import { AnchorMe } from './matchers/anchorme.ts'
-import { DateMatcher } from './matchers/date.ts'
-import { Ipv4Matcher } from './matchers/ipv4.ts'
-import { WordMatcher } from './matchers/word.ts'
+import { AnchorMe } from '../src/matchers/anchorme.ts'
+import { DateMatcher } from '../src/matchers/date.ts'
+import { Ipv4Matcher } from '../src/matchers/ipv4.ts'
+import { WordMatcher } from '../src/matchers/word.ts'
 import { RegexWrapper } from './_testUtils.ts'
 
 Deno.test(DateMatcher.name, async (t) => {
