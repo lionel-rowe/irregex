@@ -3,7 +3,7 @@ import { Irregex } from '../irregex.ts'
 export class WordMatcher extends Irregex {
 	segmenter: Intl.Segmenter
 
-	constructor(locale: string) {
+	constructor(locale: Intl.LocalesArgument) {
 		super()
 		this.segmenter = new Intl.Segmenter(locale, { granularity: 'word' })
 	}

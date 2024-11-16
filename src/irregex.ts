@@ -15,8 +15,6 @@ export type Matcher = Pick<
 	| typeof Symbol.split
 >
 
-const replaceValueRe = () => /\$(?:([$&`'])|(\d{1,2})|<([^>]*)>)/g
-
 /**
  * An abstract class that implements the `Matcher` contract, making it compatible with most functions that expect a
  * `RegExp`.
@@ -124,10 +122,16 @@ export abstract class Irregex<T = unknown> implements Matcher {
 		return all.length ? all as string[] & { 0: string } : null
 	}
 
+	#replaceValueRe(flags: string) {
+		return new RegExp(
+			/\$(?:([$&`'])|(\d{1,2})|<([^>]*)>)/,
+			flags,
+		)
+	}
 	#replaceValueToReplacer(replaceValue: string) {
 		// fast paths for common cases
 		if (replaceValue === '') return () => ''
-		if (!replaceValueRe().test(replaceValue)) return () => replaceValue
+		if (!this.#replaceValueRe('').test(replaceValue)) return () => replaceValue
 
 		return (substring: string, ...args: unknown[]) => {
 			// function replacer(match, p1, p2, /* ..., */ pN, offset, string, groups)
@@ -138,7 +142,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 			const groups = args[offsetIdx + 2] as Record<string, string> | undefined
 
 			return replaceValue.replaceAll(
-				replaceValueRe(),
+				this.#replaceValueRe('g'),
 				(m, sym, d, ident) => {
 					switch (sym) {
 						// $$	Inserts a "$".
@@ -267,29 +271,5 @@ export abstract class Irregex<T = unknown> implements Matcher {
 
 		out.push(str.slice(p))
 		return out
-	}
-}
-
-/**
- * Combine multiple matchers (`RegExp`s, `Irregex`es) to iterate through them in sync.
- */
-export class CombinedMatcher extends Irregex {
-	childMatchers: Matcher[]
-
-	constructor(childMatchers: Matcher[]) {
-		super()
-		for (const m of childMatchers) {
-			if (!m.global) throw new TypeError('All child matchers must be global')
-		}
-		this.childMatchers = childMatchers
-		this.trackLastIndex = this.childMatchers
-	}
-
-	getMatch(str: string): RegExpExecArray {
-		const nexts = this.childMatchers.map((matcher) => matcher.exec(str)).filter((x) => x != null)
-
-		nexts.sort((a, b) => a!.index - b!.index)
-
-		return nexts[0]
 	}
 }
