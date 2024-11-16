@@ -10,7 +10,6 @@ export class DateMatcher extends Irregex {
 
 	constructor() {
 		super()
-		this.trackLastIndex = [this.re]
 		this.segmenter = new Intl.Segmenter('en-US', { granularity: 'word' })
 	}
 
