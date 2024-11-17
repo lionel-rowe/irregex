@@ -7,7 +7,7 @@ export type Matcher = Pick<
 	| 'exec'
 	| 'test'
 	| 'lastIndex'
-	| 'global'
+	| 'flags'
 	| typeof Symbol.matchAll
 	| typeof Symbol.match
 	| typeof Symbol.replace
@@ -32,8 +32,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 	 */
 	abstract getMatch(str: string): (RegExpExecArray & T) | null
 
-	readonly flags = 'g'
-	readonly global = true
+	flags: string = 'g'
 
 	#lastIndex = 0
 	get lastIndex(): number {
@@ -208,11 +207,7 @@ export abstract class Irregex<T = unknown> implements Matcher {
 		using _ = this.#resetLastIndex(this.lastIndex)
 		this.lastIndex = 0
 
-		for (const match of this[Symbol.matchAll](str)) {
-			return match.index
-		}
-
-		return -1
+		return this.exec(str)?.index ?? -1
 	}
 
 	#resetLastIndex(to: number) {
@@ -271,5 +266,24 @@ export abstract class Irregex<T = unknown> implements Matcher {
 
 		out.push(str.slice(p))
 		return out
+	}
+
+	/**
+	 * Returns a proxied `RegExp` that forwards all property/method lookups to this `Irregex` instance
+	 * if they exist on it.
+	 * @returns The proxied `RegExp`
+	 */
+	asRegExp(): this & RegExp {
+		const bound = new Map<string | symbol, (...args: unknown[]) => unknown>()
+		return new Proxy(new RegExp(''), {
+			get: (regex, key, _receiver) => {
+				if (key in this) {
+					const val = Reflect.get(this, key)
+					return typeof val === 'function' ? bound.set(key, bound.get(key) ?? val.bind(this)).get(key) : val
+				}
+				return Reflect.get(regex, key)
+			},
+			set: (_regex, key, val, _receiver) => Reflect.set(this, key, val),
+		}) as this & RegExp
 	}
 }

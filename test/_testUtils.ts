@@ -12,10 +12,13 @@ export function assertAllEqual<T>(...args: [reference: T, actual1: T, actual2: T
 /** A wrapper around RegExp that should behave exactly the same as its wrapped RegExp */
 export class RegexWrapper extends Irregex {
 	re: RegExp
+	source: string
 
-	constructor(re: RegExp) {
+	constructor(pattern: RegExp | string, flags?: string) {
 		super()
-		this.re = new RegExp(re.source, re.flags)
+		this.re = new RegExp(pattern, flags)
+		this.source = this.re.source
+		this.flags = this.re.flags
 		this.trackLastIndex = [this.re]
 	}
 
