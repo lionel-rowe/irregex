@@ -2,24 +2,31 @@
  * A contract fulfilled by both `RegExp`s and `Irregex`s. The `Irregex` class implements these properties and methods of
  * the `RegExp` interface in a way that aims for compatibility with `RegExp`.
  */
-export type Matcher = Pick<
-	RegExp,
-	| 'exec'
-	| 'test'
-	| 'lastIndex'
-	| 'flags'
-	| typeof Symbol.matchAll
-	| typeof Symbol.match
-	| typeof Symbol.replace
-	| typeof Symbol.search
-	| typeof Symbol.split
->
+export type Matcher = RegExp | IrregexCompatible
+
+type IrregexCompatible =
+	& Pick<
+		RegExp,
+		| 'exec'
+		| 'test'
+		| 'lastIndex'
+		| 'flags'
+		| typeof Symbol.match
+		| typeof Symbol.replace
+		| typeof Symbol.search
+		| typeof Symbol.split
+	>
+	& {
+		// override `Symbol.matchAll` signature as TS's current one is wrong
+		// See https://github.com/microsoft/TypeScript/issues/60515
+		[Symbol.matchAll](str: string): Iterable<RegExpExecArray>
+	}
 
 /**
  * An abstract class that implements the `Matcher` contract, making it compatible with most functions that expect a
  * `RegExp`.
  */
-export abstract class Irregex<T = unknown> implements Matcher {
+export abstract class Irregex<T = unknown> implements IrregexCompatible {
 	/**
 	 * At minimum, derived `Irregex` classes must implement the `getMatch` method. The `getMatch` method is stateful and
 	 * relies on the `lastIndex` property.
