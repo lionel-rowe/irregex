@@ -1,4 +1,4 @@
-import { assertEquals } from '@std/assert/equals'
+import { assertEquals } from '@std/assert'
 import { Irregex } from '../irregex.ts'
 import { AnchorMe } from './anchorme.ts'
 import { Ipv4Matcher } from './ipv4.ts'

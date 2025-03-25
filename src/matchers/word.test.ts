@@ -1,4 +1,4 @@
-import { assertEquals } from '@std/assert/equals'
+import { assertEquals } from '@std/assert'
 import { WordMatcher } from './word.ts'
 
 Deno.test(WordMatcher.name, async (t) => {

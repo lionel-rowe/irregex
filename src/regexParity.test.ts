@@ -1,4 +1,4 @@
-import { assertEquals } from '@std/assert/equals'
+import { assertEquals } from '@std/assert'
 import { assertAllEqual, RegexWrapper } from './_testUtils.ts'
 
 Deno.test(Symbol.replace.description!, async (t) => {

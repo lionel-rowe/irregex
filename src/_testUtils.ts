@@ -1,4 +1,4 @@
-import { assertEquals } from '@std/assert/equals'
+import { assertEquals } from '@std/assert'
 import { Irregex } from './irregex.ts'
 
 export function assertAllEqual<T>(...args: [reference: T, actual1: T, actual2: T, ...actuals: T[]]) {

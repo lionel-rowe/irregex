@@ -1,6 +1,5 @@
-import { assertEquals } from '@std/assert/equals'
+import { assertEquals, assertInstanceOf } from '@std/assert'
 import { Irregex } from '../src/irregex.ts'
-import { assertInstanceOf } from '@std/assert/instance-of'
 
 class Irre extends Irregex {
 	re = /./g

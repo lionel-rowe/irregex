@@ -1,4 +1,4 @@
-import { assertEquals } from '@std/assert/equals'
+import { assertEquals } from '@std/assert'
 import { Ipv4Matcher } from './ipv4.ts'
 
 Deno.test(Ipv4Matcher.name, async (t) => {
