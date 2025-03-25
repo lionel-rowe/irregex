@@ -37,7 +37,7 @@ export abstract class Irregex<T = unknown> implements IrregexCompatible {
 	 * @param str The input string
 	 * @returns A `RegExpExecArray` or `null`
 	 */
-	abstract getMatch(str: string): (RegExpExecArray & T) | null
+	protected abstract getMatch(str: string): (RegExpExecArray & T) | null
 
 	flags: string = 'g'
 
@@ -81,7 +81,10 @@ export abstract class Irregex<T = unknown> implements IrregexCompatible {
 	 * @param getter A function that returns an iterable of matches
 	 * @returns A `RegExpExecArray` or `null`
 	 */
-	fromIter(str: string, getter: (this: this) => Iterable<RegExpExecArray & T>): (RegExpExecArray & T) | null {
+	protected fromIter(
+		str: string,
+		getter: (this: this) => Iterable<RegExpExecArray & T>,
+	): (RegExpExecArray & T) | null {
 		if (this.#lastCached?.input !== str) {
 			const iterator = getter.call(this)[Symbol.iterator]()
 
