@@ -1,6 +1,6 @@
 import dedent from 'string-dedent'
 import { assertEquals } from '@std/assert'
-import { NormalizedMatcher } from '../../src/matchers/normalized.ts'
+import { NormalizedMatcher } from './normalized.ts'
 
 Deno.test(NormalizedMatcher.name, async (t) => {
 	await t.step('`g` and `d` flags', () => {

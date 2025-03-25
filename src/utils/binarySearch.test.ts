@@ -1,5 +1,5 @@
 import { assertEquals } from '@std/assert'
-import { binarySearch } from '../../src/utils/binarySearch.ts'
+import { binarySearch } from './binarySearch.ts'
 
 Deno.test(binarySearch.name, () => {
 	const arr = [0, 10, 200, 3_000, 40_000, 500_000]

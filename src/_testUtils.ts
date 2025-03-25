@@ -1,5 +1,5 @@
 import { assertEquals } from '@std/assert/equals'
-import { Irregex } from '../src/irregex.ts'
+import { Irregex } from './irregex.ts'
 
 export function assertAllEqual<T>(...args: [reference: T, actual1: T, actual2: T, ...actuals: T[]]) {
 	const [reference, ...actuals] = args

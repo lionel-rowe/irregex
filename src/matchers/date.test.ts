@@ -1,5 +1,5 @@
 import { assertEquals } from '@std/assert'
-import { DateMatcher } from '../../src/matchers/date.ts'
+import { DateMatcher } from './date.ts'
 
 Deno.test(DateMatcher.name, async (t) => {
 	await t.step('OK, hyphens', () => {

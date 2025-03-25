@@ -1,5 +1,5 @@
 import { assertEquals } from '@std/assert/equals'
-import { AnchorMe } from '../../src/matchers/anchorme.ts'
+import { AnchorMe } from './anchorme.ts'
 
 Deno.test(AnchorMe.name, async (t) => {
 	const input = `

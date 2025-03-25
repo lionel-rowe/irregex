@@ -1,5 +1,5 @@
 import { assertEquals, assertLessOrEqual } from '@std/assert'
-import { PhysicalLineBoundaryMatcher } from '../../src/matchers/physicalLineBoundary.ts'
+import { PhysicalLineBoundaryMatcher } from './physicalLineBoundary.ts'
 import { unicodeWidth } from '@std/cli/unicode-width'
 
 Deno.test(PhysicalLineBoundaryMatcher.name, async (t) => {

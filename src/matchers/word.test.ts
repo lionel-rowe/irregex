@@ -1,5 +1,5 @@
 import { assertEquals } from '@std/assert/equals'
-import { WordMatcher } from '../../src/matchers/word.ts'
+import { WordMatcher } from './word.ts'
 
 Deno.test(WordMatcher.name, async (t) => {
 	await t.step(Symbol.replace.description!, () => {
