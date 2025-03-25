@@ -15,7 +15,7 @@ For convenience, you can also use the `fromIter` helper, which caches iterable r
 Matching words in a string:
 
 ```ts
-import { Irregex } from 'irregex'
+import { Irregex } from 'jsr:@li/irregex'
 
 class WordMatcher extends Irregex {
     segmenter: Intl.Segmenter
@@ -89,7 +89,7 @@ Combine multiple matchers (`RegExp`s, `Irregex`es) to iterate through them in sy
 Combining different types of matchers:
 
 ```ts
-import { CombinedMatcher } from 'irregex'
+import { CombinedMatcher } from 'jsr:@li/irregex/matchers/combined'
 
 const matcher = new CombinedMatcher([
     new WordMatcher('en-US'),
@@ -103,7 +103,7 @@ matcher[Symbol.match]('One two three 1 2 3 192.168.1.1 999.999.999.999 255.255.2
 Combining case-sensitive and case-insensitive regexes:
 
 ```ts
-import { CombinedMatcher } from 'irregex'
+import { CombinedMatcher } from 'jsr:@li/irregex/matchers/combined'
 
 const matcher = new CombinedMatcher([
     /a/g,

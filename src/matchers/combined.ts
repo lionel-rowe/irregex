@@ -1,4 +1,4 @@
-import { Irregex, type Matcher } from './irregex.ts'
+import { Irregex, type Matcher } from '../irregex.ts'
 
 /**
  * Combine multiple matchers (`RegExp`s, `Irregex`es) to iterate through them in sync.

@@ -1,3 +1,5 @@
+import { replaceValueToReplacer } from './replace.ts'
+
 /**
  * A contract fulfilled by both `RegExp`s and `Irregex`s. The `Irregex` class implements these properties and methods of
  * the `RegExp` interface in a way that aims for compatibility with `RegExp`.
@@ -131,58 +133,6 @@ export abstract class Irregex<T = unknown> implements IrregexCompatible {
 		return all.length ? all as string[] & { 0: string } : null
 	}
 
-	#replaceValueRe(flags: string) {
-		return new RegExp(
-			/\$(?:([$&`'])|(\d{1,2})|<([^>]*)>)/,
-			flags,
-		)
-	}
-	#replaceValueToReplacer(replaceValue: string) {
-		// fast paths for common cases
-		if (replaceValue === '') return () => ''
-		if (!this.#replaceValueRe('').test(replaceValue)) return () => replaceValue
-
-		return (substring: string, ...args: unknown[]) => {
-			// function replacer(match, p1, p2, /* ..., */ pN, offset, string, groups)
-			const offsetIdx = args.findIndex((x) => typeof x === 'number')!
-			const offset = args[offsetIdx] as number
-			const partials = args.slice(0, offsetIdx) as string[]
-			const fullStr = args[offsetIdx + 1] as string
-			const groups = args[offsetIdx + 2] as Record<string, string> | undefined
-
-			return replaceValue.replaceAll(
-				this.#replaceValueRe('g'),
-				(m, sym, d, ident) => {
-					switch (sym) {
-						// $$	Inserts a "$".
-						case '$':
-							return '$'
-						// $&	Inserts the matched substring.
-						case '&':
-							return substring
-						// $`	Inserts the portion of the string that precedes the matched substring.
-						case '`':
-							return fullStr.slice(0, offset)
-						// $'	Inserts the portion of the string that follows the matched substring.
-						case "'":
-							return fullStr.slice(offset + substring.length)
-						default: {
-							if (d) {
-								// $n	Inserts the nth (1-indexed) capturing group where n is a positive integer less than 100.
-								return partials[Number(d) - 1] ?? m
-							} else if (ident) {
-								// $<Name>	Inserts the named capturing group where Name is the group name.
-								return groups ? groups[ident] ?? '' : m
-							}
-
-							return ''
-						}
-					}
-				},
-			)
-		}
-	}
-
 	// deno-lint-ignore no-explicit-any
 	[Symbol.replace](str: string, replacer: string | ((substring: string, ...args: any[]) => string)): string {
 		using _ = this.#resetLastIndex(0)
@@ -192,7 +142,7 @@ export abstract class Irregex<T = unknown> implements IrregexCompatible {
 		if (!matches.length) return str
 
 		const out: string[] = []
-		const replace = typeof replacer === 'string' ? this.#replaceValueToReplacer(replacer) : replacer
+		const replace = typeof replacer === 'string' ? replaceValueToReplacer(replacer) : replacer
 
 		out.push(str.slice(0, matches[0]?.index))
 

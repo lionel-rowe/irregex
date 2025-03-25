@@ -1,8 +1,8 @@
 import { assertEquals } from '@std/assert/equals'
-import { Irregex } from '../src/irregex.ts'
-import { AnchorMe } from '../src/matchers/anchorme.ts'
-import { Ipv4Matcher } from '../src/matchers/ipv4.ts'
-import { CombinedMatcher } from '../src/combined.ts'
+import { Irregex } from '../../src/irregex.ts'
+import { AnchorMe } from '../../src/matchers/anchorme.ts'
+import { Ipv4Matcher } from '../../src/matchers/ipv4.ts'
+import { CombinedMatcher } from '../../src/matchers/combined.ts'
 
 Deno.test(CombinedMatcher.name, () => {
 	class NumberMatcher extends Irregex {

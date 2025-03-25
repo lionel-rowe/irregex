@@ -15,7 +15,8 @@ export class PhysicalLineBoundaryMatcher extends Irregex {
 			let prevWordBreak: RegExpExecArray | undefined
 
 			for (const m of str.matchAll(/\s+/g)) {
-				const line = str.slice(prevLineBreak?.index ?? 0, m.index).split('\n').pop()!
+				const rest = str.slice(prevLineBreak?.index ?? 0, m.index)
+				const line = rest.slice(rest.lastIndexOf('\n') + 1)
 
 				if (unicodeWidth(line) > this.colWidth) {
 					if (prevWordBreak != null) yield prevWordBreak
