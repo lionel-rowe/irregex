@@ -3,41 +3,79 @@ import { binarySearch } from './binarySearch.ts'
 import { assertSpyCalls, spy } from '@std/testing/mock'
 
 Deno.test(binarySearch.name, async (t) => {
-	await t.step('empty array', () => {
-		assertEquals(binarySearch([], -1), -1)
-		assertEquals(binarySearch([], 0), -1)
-		assertEquals(binarySearch([], 1), -1)
+	await t.step('examples', () => {
+		assertEquals(binarySearch([0, 1], 0), 0)
+		assertEquals(binarySearch([0, 1], 1), 1)
+		assertEquals(binarySearch([0, 1], -0.5), -1) // -1 == ~0 (bitwise complement)
+		assertEquals(binarySearch([0, 1], 0.5), -2) // -2 == ~1 (bitwise complement)
+		assertEquals(binarySearch([0, 1], 1.5), -3) // -3 == ~2 (bitwise complement)
 	})
 
-	await t.step('single element', () => {
-		assertEquals(binarySearch([0], -1), -1)
-		assertEquals(binarySearch([0], 0), 0)
-		assertEquals(binarySearch([0], 1), -2)
+	await t.step('0 elements', () => {
+		const arr: number[] = []
+		assertEquals(binarySearch(arr, -1), -1)
+		assertEquals(binarySearch(arr, 0), -1)
+		assertEquals(binarySearch(arr, 1), -1)
 	})
 
-	await t.step('multiple elements', () => {
-		const arr = [0, 10, 200, 3_000, 40_000, 500_000]
+	await t.step('1 element', () => {
+		const arr = [0]
+		assertEquals(binarySearch(arr, -1), -1)
+		assertEquals(binarySearch(arr, 0), 0)
+		assertEquals(binarySearch(arr, 1), -2)
+	})
 
-		const fn = () => {
-			assertEquals(binarySearch(arr, -1), -1)
-			assertEquals(binarySearch(arr, 0), 0)
-			assertEquals(binarySearch(arr, 10), 1)
-			assertEquals(binarySearch(arr, 200), 2)
-			assertEquals(binarySearch(arr, 3_000), 3)
-			assertEquals(binarySearch(arr, 40_000), 4)
-			assertEquals(binarySearch(arr, 40_001), -6)
-			assertEquals(binarySearch(arr, 500_000), 5)
-			assertEquals(binarySearch(arr, 500_001), -7)
-		}
+	await t.step('even number of elements', () => {
+		const arr = [0, 1]
+		assertEquals(binarySearch(arr, -1), -1)
+		assertEquals(binarySearch(arr, -0.5), -1)
+		assertEquals(binarySearch(arr, 0), 0)
+		assertEquals(binarySearch(arr, 0.5), -2)
+		assertEquals(binarySearch(arr, 1), 1)
+		assertEquals(binarySearch(arr, 1.5), -3)
+		assertEquals(binarySearch(arr, 2), -3)
+	})
 
-		fn()
+	await t.step('odd number of elements', () => {
+		const arr = [0, 1, 2]
+		assertEquals(binarySearch(arr, -1), -1)
+		assertEquals(binarySearch(arr, -0.5), -1)
+		assertEquals(binarySearch(arr, 0), 0)
+		assertEquals(binarySearch(arr, 0.5), -2)
+		assertEquals(binarySearch(arr, 1), 1)
+		assertEquals(binarySearch(arr, 1.5), -3)
+		assertEquals(binarySearch(arr, 2), 2)
+		assertEquals(binarySearch(arr, 2.5), -4)
+		assertEquals(binarySearch(arr, 3), -4)
+	})
 
-		assertEquals(binarySearch(arr, 6_000_000), -7)
-		arr.push(6_000_000)
-		assertEquals(binarySearch(arr, 6_000_000), 6)
-		assertEquals(binarySearch(arr, 70_000_000), -8)
+	await t.step('bigints', () => {
+		const arr = [0n, 1n, 3n]
+		assertEquals(binarySearch(arr, -1n), -1)
+		assertEquals(binarySearch(arr, 0n), 0)
+		assertEquals(binarySearch(arr, 1n), 1)
+		assertEquals(binarySearch(arr, 2n), -3)
+		assertEquals(binarySearch(arr, 3n), 2)
+	})
 
-		fn()
+	await t.step('typed arrays', () => {
+		const arr = new Int32Array([0, 1, 3])
+		assertEquals(binarySearch(arr, -1), -1)
+		assertEquals(binarySearch(arr, 0), 0)
+		assertEquals(binarySearch(arr, 1), 1)
+		assertEquals(binarySearch(arr, 2), -3)
+		assertEquals(binarySearch(arr, 3), 2)
+	})
+
+	await t.step('typing', () => {
+		void (() => {
+			// @ts-expect-error Argument of type 'number' is not assignable to parameter of type 'bigint'.
+			binarySearch([0n], 0)
+			// @ts-expect-error Argument of type 'bigint' is not assignable to parameter of type 'number'.
+			binarySearch([0], 0n)
+			// @ts-expect-error Argument of type 'undefined' is not assignable to parameter of type 'number'.
+			binarySearch([0], undefined)
+		})
 	})
 
 	await t.step('algorithm correctness - number of loop iterations', () => {

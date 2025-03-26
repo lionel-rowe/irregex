@@ -24,8 +24,8 @@ export class DateMatcher extends Irregex {
 				if (buf.length > segmentLen) buf.shift()
 
 				if (buf.length < segmentLen) continue
-				if (buf[0].length !== yearLen) continue
-				if (/\D/.test(buf[0])) continue
+				if (buf[0]!.length !== yearLen) continue
+				if (/\D/.test(buf[0]!)) continue
 
 				const candidate = buf.join('')
 				const m = re.exec(candidate)

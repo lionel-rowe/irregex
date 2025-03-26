@@ -52,7 +52,7 @@ Deno.test(NormalizedMatcher.name, async (t) => {
 
 		const matcher = new NormalizedMatcher({
 			normalize: /(\p{L})\p{M}*/gu,
-			normalizer: (x) => x[1].normalize('NFD')[Symbol.iterator]().next().value!,
+			normalizer: (x) => x[1]!.normalize('NFD')[Symbol.iterator]().next().value!,
 			matcher: MATCHER,
 		})
 
@@ -60,13 +60,13 @@ Deno.test(NormalizedMatcher.name, async (t) => {
 
 		assertEquals(result.flat(), [WORD, WORD])
 
-		assertEquals(result[0].index, input.indexOf(WORD))
-		assertEquals(result[0].input, input)
-		assertEquals(input.slice(result[0].index, result[0].index + WORD.length), WORD)
+		assertEquals(result[0]!.index, input.indexOf(WORD))
+		assertEquals(result[0]!.input, input)
+		assertEquals(input.slice(result[0]!.index, result[0]!.index + WORD.length), WORD)
 
-		assertEquals(result[1].index, input.indexOf(WORD, input.indexOf(WORD) + 1))
-		assertEquals(result[1].input, input)
-		assertEquals(input.slice(result[1].index, result[1].index + WORD.length), WORD)
+		assertEquals(result[1]!.index, input.indexOf(WORD, input.indexOf(WORD) + 1))
+		assertEquals(result[1]!.input, input)
+		assertEquals(input.slice(result[1]!.index, result[1]!.index + WORD.length), WORD)
 	})
 })
 

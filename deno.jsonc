@@ -28,7 +28,7 @@
 		"proseWrap": "preserve",
 		"exclude": ["README.md"]
 	},
-	"compilerOptions": { "strict": true },
+	"compilerOptions": { "strict": true, "noUncheckedIndexedAccess": true },
 	"lint": { "rules": { "tags": ["recommended"] } },
 	"exclude": []
 }

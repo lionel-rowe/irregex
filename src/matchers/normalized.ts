@@ -88,13 +88,15 @@ export class NormalizedMatcher extends Irregex {
 	}
 
 	private static OffsetMap = class {
-		#offsets: [number, number][] = []
-		#replacementOffsets: number[] = []
+		#offsets: [number, number][]
+		#replacementOffsets: Int32Array
 
 		/** Map of `replacement-offset -> original-offset` */
 		constructor(offsets: [number, number][]) {
+			// ensure no duplicate replacement offsets
+			offsets = [...new Map(offsets)]
 			this.#offsets = offsets
-			this.#replacementOffsets = offsets.map(([x]) => x)
+			this.#replacementOffsets = Int32Array.from(offsets, ([x]) => x)
 		}
 
 		remapToOriginal(offset: number) {
@@ -103,7 +105,7 @@ export class NormalizedMatcher extends Irregex {
 			if (result === -1) return offset
 			if (result < 0) {
 				const prevIdx = ~result - 1
-				return this.#offsets[prevIdx]![1] + (offset - this.#replacementOffsets[prevIdx])
+				return this.#offsets[prevIdx]![1] + (offset - this.#replacementOffsets[prevIdx]!)
 			}
 
 			return this.#offsets[result]![1]

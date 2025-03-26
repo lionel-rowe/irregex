@@ -7,7 +7,7 @@ Deno.test(convertReplacerFunction.name, () => {
 		'0:Hello 6:world',
 	)
 	assertEquals(
-		'Hello world'.replace(/(?<initial>\w)\w+/g, convertReplacerFunction((m) => m.groups!.initial)),
+		'Hello world'.replace(/(?<initial>\w)\w+/g, convertReplacerFunction((m) => m.groups!.initial!)),
 		'H w',
 	)
 })
