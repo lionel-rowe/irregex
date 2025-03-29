@@ -5,8 +5,10 @@ import { NormalizedMatcher } from './normalized.ts'
 Deno.test(NormalizedMatcher.name, async (t) => {
 	await t.step('`g` and `d` flags', () => {
 		const matcher = new NormalizedMatcher({
-			normalize: /\w{2}/g,
-			normalizer: () => '@',
+			normalizers: [{
+				selector: /\w{2}/g,
+				replacer: () => '@',
+			}],
 			matcher: /(?<first>@)@*/gd,
 		})
 
@@ -25,8 +27,10 @@ Deno.test(NormalizedMatcher.name, async (t) => {
 
 	await t.step('no flags', () => {
 		const matcher = new NormalizedMatcher({
-			normalize: /\w{2}/g,
-			normalizer: () => '@',
+			normalizers: [{
+				selector: /\w{2}/g,
+				replacer: () => '@',
+			}],
 			matcher: /(?<first>@)@*/,
 		})
 
@@ -40,40 +44,68 @@ Deno.test(NormalizedMatcher.name, async (t) => {
 		assertEquals(matcher[Symbol.replace](input, '[$&]'), '[abcdef] ghij kl')
 	})
 
-	await t.step('long text with diacritics', () => {
-		const input = dedent`
-			Là chưa diễn và có ví có trợ định hán này cách hoàn dài gõ. Chế byte vì byte xử tiêu phẳng dụng tự hết hay consortium là này tính tiếng này u nhau mặc là. Ký trên bit số mặc đó nghe phiên cách được ra. Số đầu qof xử thêm ngày plane tiến. Chữ hai mặt người chuyên là quan của từ trị chia thì mã, các đa và mục là cũ.
+	await t.step('long text with diacritics', async (t) => {
+		for (const form of ['NFC', 'NFD'] as const) {
+			await t.step(form, () => {
+				const input = dedent`
+					Là chưa diễn và có ví có trợ định hán này cách hoàn dài gõ. Chế byte vì byte xử tiêu phẳng dụng tự hết hay consortium là này tính tiếng này u nhau mặc là. Ký trên bit số mặc đó nghe phiên cách được ra. Số đầu qof xử thêm ngày plane tiến. Chữ hai mặt người chuyên là quan của từ trị chia thì mã, các đa và mục là cũ.
 
-			Nhóm v ngôn ngữ, từ một mà xử mềm không mặt chương số đảm viết nyrh gì hình ngữ chí. Lượng của bit tiếng ơ thuộc của trung nhiên hiệu bởi của thì chữ có thành nhật ta phồn hoặc. Nay bit các tương, được, do nhất để trong đích một các. Quốc phải ít sử nằm người phẳng phần.
-		`
+					Nhóm v ngôn ngữ, từ một mà xử mềm không mặt chương số đảm viết nyrh gì hình ngữ chí. Lượng của bit tiếng ơ thuộc của trung nhiên hiệu bởi của thì chữ có thành nhật ta phồn hoặc. Nay bit các tương, được, do nhất để trong đích một các. Quốc phải ít sử nằm người phẳng phần.
+				`.normalize(form)
 
-		const WORD = 'người'
-		const MATCHER = /nguoi/g
+				const WORD = 'người'.normalize(form)
+				const MATCHER = /nguoi/g
+
+				const matcher = new NormalizedMatcher({
+					normalizers: [{
+						selector: /(\p{L})\p{M}*/gu,
+						replacer: (x) => x[1]!.normalize('NFD')[Symbol.iterator]().next().value!,
+					}],
+					matcher: MATCHER,
+				})
+
+				const result = [...matcher[Symbol.matchAll](input)]
+
+				assertEquals(result.flat(), [WORD, WORD])
+
+				assertEquals(result[0]!.index, input.indexOf(WORD))
+				assertEquals(result[0]!.input, input)
+				assertEquals(input.slice(result[0]!.index, result[0]!.index + WORD.length), WORD)
+
+				assertEquals(result[1]!.index, input.indexOf(WORD, input.indexOf(WORD) + 1))
+				assertEquals(result[1]!.input, input)
+				assertEquals(input.slice(result[1]!.index, result[1]!.index + WORD.length), WORD)
+			})
+		}
+	})
+
+	await t.step('combined normalizations', () => {
+		const input = 'người phẳng, người  phẳng, nguoi phang, nguoi  phang, người phẳng'
 
 		const matcher = new NormalizedMatcher({
-			normalize: /(\p{L})\p{M}*/gu,
-			normalizer: (x) => x[1]!.normalize('NFD')[Symbol.iterator]().next().value!,
-			matcher: MATCHER,
+			normalizers: [
+				{
+					selector: /\s+/gu,
+					replacer: () => ' ',
+				},
+				{
+					selector: /(\p{L})\p{M}*/gu,
+					replacer: (x) => x[1]!.normalize('NFD')[Symbol.iterator]().next().value!,
+				},
+			],
+			matcher: /nguoi phang/g,
 		})
 
-		const result = [...matcher[Symbol.matchAll](input)]
-
-		assertEquals(result.flat(), [WORD, WORD])
-
-		assertEquals(result[0]!.index, input.indexOf(WORD))
-		assertEquals(result[0]!.input, input)
-		assertEquals(input.slice(result[0]!.index, result[0]!.index + WORD.length), WORD)
-
-		assertEquals(result[1]!.index, input.indexOf(WORD, input.indexOf(WORD) + 1))
-		assertEquals(result[1]!.input, input)
-		assertEquals(input.slice(result[1]!.index, result[1]!.index + WORD.length), WORD)
+		const result = matcher[Symbol.replace](input, '[$&]')
+		assertEquals(result, '[người phẳng], [người  phẳng], [nguoi phang], [nguoi  phang], [người phẳng]')
 	})
 })
 
 const OffsetMap = NormalizedMatcher['OffsetMap']
 
 Deno.test(OffsetMap.name, () => {
-	const offsetMap = new OffsetMap([[2, 5], [4, 9], [10, 20]])
+	const offsetMap = new OffsetMap([[2, 3], [4, 2], [10, 5]])
+
 	assertEquals(offsetMap.remapToOriginal(-999), -999)
 	assertEquals(offsetMap.remapToOriginal(0), 0)
 	assertEquals(offsetMap.remapToOriginal(1), 1)

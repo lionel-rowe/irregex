@@ -1,23 +1,65 @@
 import { Irregex } from '../irregex.ts'
 import { convertReplacerFunction, type TypedReplacerFn } from '../replace.ts'
-import { binarySearch } from '../utils/binarySearch.ts'
 
 type Props = {
-	normalize: RegExp
-	normalizer: TypedReplacerFn
+	normalizers: readonly NormalizerConfig[]
 	matcher: RegExp
+}
+
+type NormalizerConfig = {
+	selector: RegExp
+	replacer: TypedReplacerFn
+}
+
+type OffsetMapState = Readonly<{
+	readonly brand: unique symbol
+	cursor: number
+	increment: number
+}>
+
+class OffsetMap {
+	#cursor = 0
+	#increment = 0
+
+	readonly offsets: [number, number][]
+
+	/** Map of `replacement-offset -> increment` (negative = decrement) */
+	constructor(offsets: [number, number][]) {
+		this.offsets = offsets
+	}
+
+	get state(): OffsetMapState {
+		return {
+			cursor: this.#cursor,
+			increment: this.#increment,
+		} as OffsetMapState
+	}
+
+	set state({ cursor, increment }: OffsetMapState) {
+		this.#cursor = cursor
+		this.#increment = increment
+	}
+
+	remapToOriginal(offset: number) {
+		for (; this.#cursor < this.offsets.length; ++this.#cursor) {
+			const offsetInfo = this.offsets[this.#cursor]!
+			if (offsetInfo![0] > offset) break
+			this.#increment += offsetInfo![1]
+		}
+
+		return offset + this.#increment
+	}
 }
 
 export class NormalizedMatcher extends Irregex {
 	#matcher: RegExp
-	#normalize: RegExp
-	#normalizer: TypedReplacerFn
 	#originalMatcherFlags: string
 
-	constructor({ normalize, normalizer, matcher }: Props) {
+	#normalizers: readonly NormalizerConfig[]
+
+	constructor({ matcher, normalizers }: Props) {
 		super()
-		this.#normalize = normalize
-		this.#normalizer = normalizer
+		this.#normalizers = normalizers
 
 		this.#matcher = new RegExp(matcher.source, [...new Set(matcher.flags + 'dg')].join(''))
 		this.#originalMatcherFlags = matcher.flags
@@ -27,33 +69,59 @@ export class NormalizedMatcher extends Irregex {
 
 	protected override getMatch(input: string): RegExpExecArray | null {
 		return this.fromIter(input, function* () {
-			const offsets: [number, number][] = []
+			let replacementIncrement = 0
 
-			let replacementIndexIncrement = 0
-			const inputNormalized = input.replaceAll(
-				this.#normalize,
-				convertReplacerFunction((x) => {
-					const replacement = this.#normalizer(x)
-					const [{ length: originalLength }] = x
-					const { index: originalIndex } = x
+			let offsetMap = new NormalizedMatcher.OffsetMap([])
+			let inputNormalized = input
 
-					const replacementIndex = originalIndex + replacementIndexIncrement
+			for (const { selector, replacer } of this.#normalizers) {
+				const offsets: [number, number][] = []
 
-					// offsets.push([replacementIndex, originalIndex])
-					offsets.push([replacementIndex + replacement.length, originalIndex + originalLength])
+				let originalIncrement = 0
 
-					replacementIndexIncrement += replacement.length - originalLength
+				inputNormalized = inputNormalized.replaceAll(
+					selector,
+					convertReplacerFunction((m) => {
+						const replacement = replacer(m)
+						const [{ length: originalLength }] = m
+						const originalStart = offsetMap.remapToOriginal(m.index)
 
-					return replacement
-				}),
-			)
+						const replacementStart = originalStart + replacementIncrement
 
-			const offsetMap = new NormalizedMatcher.OffsetMap(offsets)
+						if (replacement.length !== originalLength) {
+							const replacementEnd = replacementStart + replacement.length
+							const originalEnd = originalStart + originalLength
+
+							const originalEndIncrement = originalEnd - replacementEnd - originalIncrement
+							offsets.push([replacementEnd, originalEndIncrement])
+							replacementIncrement = replacementEnd - originalEnd
+							originalIncrement += originalEndIncrement
+						}
+
+						return replacement
+					}),
+				)
+
+				offsetMap = new NormalizedMatcher.OffsetMap([
+					...new Map(offsetMap.offsets),
+					...new Map(offsets),
+				].sort(([a], [b]) => a - b))
+			}
+
+			// needs to be reset for each match group
+			let state = offsetMap.state
 
 			for (const match of inputNormalized.matchAll(this.#matcher)) {
 				for (const [i, m] of match.entries()) {
 					const indices = match.indices![i]!
 					const [start] = indices
+
+					if (i === 0) {
+						state = offsetMap.state
+					} else {
+						offsetMap.state = state
+					}
+
 					const remappedStart = offsetMap.remapToOriginal(start)
 					const remappedEnd = offsetMap.remapToOriginal(start + m.length)
 
@@ -69,7 +137,7 @@ export class NormalizedMatcher extends Irregex {
 				}
 
 				for (const k of Object.keys(match.groups ?? {})) {
-					// no need to remap, as `indices.groups` correspond to, and refer to the same values as, numbered
+					// no need to remap, as `indices.groups` correspond to, are reference-equal to, numbered
 					// `indices` entries
 					match.groups![k] = input.slice(...match.indices!.groups![k]!)
 				}
@@ -87,28 +155,5 @@ export class NormalizedMatcher extends Irregex {
 		})
 	}
 
-	private static OffsetMap = class {
-		#offsets: [number, number][]
-		#replacementOffsets: Int32Array
-
-		/** Map of `replacement-offset -> original-offset` */
-		constructor(offsets: [number, number][]) {
-			// ensure no duplicate replacement offsets
-			offsets = [...new Map(offsets)]
-			this.#offsets = offsets
-			this.#replacementOffsets = Int32Array.from(offsets, ([x]) => x)
-		}
-
-		remapToOriginal(offset: number) {
-			const result = binarySearch(this.#replacementOffsets, offset)
-
-			if (result === -1) return offset
-			if (result < 0) {
-				const prevIdx = ~result - 1
-				return this.#offsets[prevIdx]![1] + (offset - this.#replacementOffsets[prevIdx]!)
-			}
-
-			return this.#offsets[result]![1]
-		}
-	}
+	private static OffsetMap = OffsetMap
 }
