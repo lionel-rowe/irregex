@@ -21,6 +21,11 @@ class OffsetMap {
 	#cursor = 0
 	#increment = 0
 
+	#latestIncrement = 0
+	get latestIncrement() {
+		return this.#latestIncrement
+	}
+
 	readonly offsets: [number, number][]
 
 	/** Map of `replacement-offset -> increment` (negative = decrement) */
@@ -41,11 +46,15 @@ class OffsetMap {
 	}
 
 	remapToOriginal(offset: number) {
+		this.#latestIncrement = 0
+
 		for (; this.#cursor < this.offsets.length; ++this.#cursor) {
 			const offsetInfo = this.offsets[this.#cursor]!
 			const [currentOffset, currentIncrement] = offsetInfo
 
 			if (currentOffset > offset) break
+
+			this.#latestIncrement = currentIncrement
 
 			this.#increment += currentIncrement
 		}
@@ -138,12 +147,13 @@ export class NormalizedMatcher extends Irregex {
 					 * trailing whitespace (`"abc "` -> `"abc"`), which should be excluded from the match, vs stripped
 					 * diacritics (`"abc\u0301"` -> `"abc"`), which should be included.
 					 */
-					const maybeWs = match[i].match(/\s+$/)
-					if (maybeWs) {
-						const len = maybeWs[0].length
-
-						match[i] = match[i].slice(0, -len)
-						remappedEnd -= len
+					if (offsetMap.latestIncrement > 0) {
+						const maybeWs = match[i].match(/\s+$/)
+						if (maybeWs) {
+							const len = Math.min(maybeWs[0].length, offsetMap.latestIncrement)
+							match[i] = match[i].slice(0, -len)
+							remappedEnd -= len
+						}
 					}
 
 					indices[0] = remappedStart
