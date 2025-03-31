@@ -1,12 +1,12 @@
 import { Irregex } from '../irregex.ts'
 import { convertReplacerFunction, type TypedReplacerFn } from '../replace.ts'
 
-type Props = {
+export type NormalizedMatcherProps = {
 	normalizers: readonly NormalizerConfig[]
 	matcher: RegExp
 }
 
-type NormalizerConfig = {
+export type NormalizerConfig = {
 	selector: RegExp
 	replacer: TypedReplacerFn
 }
@@ -43,8 +43,11 @@ class OffsetMap {
 	remapToOriginal(offset: number) {
 		for (; this.#cursor < this.offsets.length; ++this.#cursor) {
 			const offsetInfo = this.offsets[this.#cursor]!
-			if (offsetInfo![0] > offset) break
-			this.#increment += offsetInfo![1]
+			const [currentOffset, currentIncrement] = offsetInfo
+
+			if (currentOffset > offset) break
+
+			this.#increment += currentIncrement
 		}
 
 		return offset + this.#increment
@@ -57,7 +60,7 @@ export class NormalizedMatcher extends Irregex {
 
 	#normalizers: readonly NormalizerConfig[]
 
-	constructor({ matcher, normalizers }: Props) {
+	constructor({ matcher, normalizers }: NormalizedMatcherProps) {
 		super()
 		this.#normalizers = normalizers
 
@@ -103,8 +106,8 @@ export class NormalizedMatcher extends Irregex {
 				)
 
 				offsetMap = new NormalizedMatcher.OffsetMap([
-					...new Map(offsetMap.offsets),
-					...new Map(offsets),
+					...offsetMap.offsets,
+					...offsets,
 				].sort(([a], [b]) => a - b))
 			}
 
@@ -115,6 +118,7 @@ export class NormalizedMatcher extends Irregex {
 				for (const [i, m] of match.entries()) {
 					const indices = match.indices![i]!
 					const [start] = indices
+					const end = start + m.length
 
 					if (i === 0) {
 						state = offsetMap.state
@@ -123,12 +127,27 @@ export class NormalizedMatcher extends Irregex {
 					}
 
 					const remappedStart = offsetMap.remapToOriginal(start)
-					const remappedEnd = offsetMap.remapToOriginal(start + m.length)
+					let remappedEnd = offsetMap.remapToOriginal(end)
 
 					match[i] = input.slice(remappedStart, remappedEnd)
 
+					/**
+					 * TODO: Maybe reconsider this logic so no need to special-case whitespace...?
+					 *
+					 * I think (?) it has to be special-cased, otherwise no way of discriminating between e.g. stripped
+					 * trailing whitespace (`"abc "` -> `"abc"`), which should be excluded from the match, vs stripped
+					 * diacritics (`"abc\u0301"` -> `"abc"`), which should be included.
+					 */
+					const maybeWs = match[i].match(/\s+$/)
+					if (maybeWs) {
+						const len = maybeWs[0].length
+
+						match[i] = match[i].slice(0, -len)
+						remappedEnd -= len
+					}
+
 					indices[0] = remappedStart
-					indices[1] = remappedEnd ?? 0
+					indices[1] = remappedEnd
 
 					if (i === 0) {
 						match.index = remappedStart

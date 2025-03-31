@@ -99,6 +99,48 @@ Deno.test(NormalizedMatcher.name, async (t) => {
 		const result = matcher[Symbol.replace](input, '[$&]')
 		assertEquals(result, '[người phẳng], [người  phẳng], [nguoi phang], [nguoi  phang], [người phẳng]')
 	})
+
+	await t.step('zero-length whitespace replacements', () => {
+		const input = ' abc '
+
+		const matcher = new NormalizedMatcher({
+			normalizers: [
+				{
+					selector: /^\s+|\s+$/g,
+					replacer: () => '',
+				},
+			],
+			matcher: /^abc$/g,
+		})
+
+		const result = matcher[Symbol.replace](input, '[$&]')
+		assertEquals(result, ' [abc] ')
+	})
+
+	await t.step('zero-length whitespace replacements + diacritics', async (t) => {
+		for (const form of ['NFC', 'NFD'] as const) {
+			await t.step(form, () => {
+				const input = ' gõ '.normalize(form)
+
+				const matcher = new NormalizedMatcher({
+					normalizers: [
+						{
+							selector: /^\s+|\s+$/g,
+							replacer: () => '',
+						},
+						{
+							selector: /(\p{L})\p{M}*/gu,
+							replacer: (x) => x[1]!.normalize('NFD')[Symbol.iterator]().next().value!,
+						},
+					],
+					matcher: /^go$/g,
+				})
+
+				const result = matcher[Symbol.replace](input, '[$&]')
+				assertEquals(result, ' [gõ] '.normalize(form))
+			})
+		}
+	})
 })
 
 const OffsetMap = NormalizedMatcher['OffsetMap']
