@@ -5,7 +5,7 @@ class Irre extends Irregex {
 	re = /./g
 	override trackLastIndex = [this.re]
 
-	override getMatch(str: string) {
+	protected override getMatch(str: string) {
 		return this.re.exec(str)
 	}
 

@@ -25,7 +25,7 @@ class WordMatcher extends Irregex {
         this.segmenter = new Intl.Segmenter(locale, { granularity: 'word' })
     }
 
-    getMatch(str: string) {
+    protected override getMatch(str: string) {
         return this.fromIter(str, function* () {
             for (const segmentData of this.segmenter.segment(str)) {
                 if (segmentData.isWordLike && /\p{L}/u.test(segmentData.segment)) {
@@ -64,7 +64,7 @@ class Ipv4Matcher extends Irregex {
         this.trackLastIndex = [this.re]
     }
 
-    getMatch(str: string) {
+    protected override getMatch(str: string) {
         while (true) {
             const m = this.re.exec(str)
             if (m == null) return null

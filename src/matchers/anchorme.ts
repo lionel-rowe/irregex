@@ -13,7 +13,7 @@ export class AnchorMe extends Irregex<{ reason: Reason }> {
 		super()
 	}
 
-	getMatch(str: string) {
+	protected override getMatch(str: string) {
 		return this.fromIter(str, function* () {
 			for (const x of list(str)) {
 				const { reason } = x as unknown as { reason: Reason }

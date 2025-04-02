@@ -8,7 +8,7 @@ export class WordMatcher extends Irregex {
 		this.segmenter = new Intl.Segmenter(locale, { granularity: 'word' })
 	}
 
-	getMatch(str: string) {
+	protected override getMatch(str: string) {
 		return this.fromIter(str, function* () {
 			for (const segmentData of this.segmenter.segment(str)) {
 				if (segmentData.isWordLike && /\p{L}/u.test(segmentData.segment)) {

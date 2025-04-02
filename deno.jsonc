@@ -1,7 +1,7 @@
 {
 	"lock": false,
 	"name": "@li/irregex",
-	"version": "0.7.2",
+	"version": "0.7.3",
 	"exports": {
 		".": "./src/mod.ts",
 		"./irregex": "./src/irregex.ts",

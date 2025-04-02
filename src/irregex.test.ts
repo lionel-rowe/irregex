@@ -8,7 +8,7 @@ Deno.test('never match', async (t) => {
 			[
 				'basic version',
 				class NeverMatcher extends Irregex {
-					getMatch() {
+					protected override getMatch() {
 						return null
 					}
 				},
@@ -16,7 +16,7 @@ Deno.test('never match', async (t) => {
 			[
 				'fromIter version',
 				class NeverMatcher extends Irregex {
-					getMatch() {
+					protected override getMatch() {
 						return this.fromIter('', () => [])
 					}
 				},
@@ -47,7 +47,7 @@ Deno.test('throw match', () => {
 		#re = /./g
 		override trackLastIndex = [this.#re]
 
-		override getMatch(str: string) {
+		protected override getMatch(str: string) {
 			if (this.lastIndex) throw new ThrowMatcherError()
 			return this.#re.exec(str)
 		}

@@ -13,7 +13,7 @@ Deno.test(CombinedMatcher.name, () => {
 
 		re = /\d+/g
 
-		getMatch(str: string): RegExpExecArray | null {
+		protected override getMatch(str: string): RegExpExecArray | null {
 			while (true) {
 				const m = this.re.exec(str)
 				if (m == null) return null

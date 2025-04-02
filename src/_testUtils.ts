@@ -22,7 +22,7 @@ export class RegexWrapper extends Irregex {
 		this.trackLastIndex = [this.re]
 	}
 
-	getMatch(str: string) {
+	protected override getMatch(str: string) {
 		return this.re.exec(str)
 	}
 }

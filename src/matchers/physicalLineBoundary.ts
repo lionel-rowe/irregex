@@ -9,7 +9,7 @@ export class PhysicalLineBoundaryMatcher extends Irregex {
 		this.colWidth = colWidth
 	}
 
-	getMatch(str: string) {
+	protected override getMatch(str: string) {
 		return this.fromIter(str, function* () {
 			let prevLineBreak: RegExpExecArray | undefined
 			let prevWordBreak: RegExpExecArray | undefined

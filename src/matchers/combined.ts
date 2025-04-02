@@ -19,7 +19,7 @@ export class CombinedMatcher extends Irregex {
 		this.trackLastIndex = this.childMatchers
 	}
 
-	getMatch(str: string): RegExpExecArray | null {
+	protected override getMatch(str: string): RegExpExecArray | null {
 		let next = this.childMatchers[0].exec(str)
 		for (const matcher of this.childMatchers.slice(1)) {
 			const result = matcher.exec(str)

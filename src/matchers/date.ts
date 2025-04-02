@@ -13,7 +13,7 @@ export class DateMatcher extends Irregex {
 		this.segmenter = new Intl.Segmenter('en-US', { granularity: 'word' })
 	}
 
-	getMatch(str: string): RegExpExecArray | null {
+	protected override getMatch(str: string): RegExpExecArray | null {
 		const { re, segmentLen, yearLen } = this
 
 		return this.fromIter(str, function* () {

@@ -8,7 +8,7 @@ export class Ipv4Matcher extends Irregex {
 		this.trackLastIndex = [this.re]
 	}
 
-	getMatch(str: string): RegExpExecArray | null {
+	protected override getMatch(str: string): RegExpExecArray | null {
 		while (true) {
 			const m = this.re.exec(str)
 			if (m == null) return null
