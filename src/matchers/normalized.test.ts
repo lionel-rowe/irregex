@@ -141,6 +141,39 @@ Deno.test(NormalizedMatcher.name, async (t) => {
 			})
 		}
 	})
+
+	await t.step('null group', () => {
+		const input = 'bbb'
+
+		const matcher = new NormalizedMatcher({
+			normalizers: [
+				{
+					selector: /^\b$/g,
+					replacer: (x) => x[0],
+				},
+			],
+			matcher: /(a)?(b)/gd,
+		})
+
+		assertEquals(
+			[...matcher[Symbol.matchAll](input)],
+			Array.from({ length: 3 }, (_, i) => {
+				const x: RegExpExecArray = Object.assign(
+					['b', undefined, 'b'] as string[] & { 0: string },
+					{
+						groups: undefined,
+						index: i,
+						input,
+						indices: Object.assign(
+							[[i, i + 1], undefined, [i, i + 1]] as [number, number][],
+							{ groups: undefined },
+						),
+					},
+				)
+				return x
+			}),
+		)
+	})
 })
 
 const OffsetMap = NormalizedMatcher['OffsetMap']

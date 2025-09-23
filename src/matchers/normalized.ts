@@ -125,6 +125,9 @@ export class NormalizedMatcher extends Irregex {
 
 			for (const match of inputNormalized.matchAll(this.#matcher)) {
 				for (const [i, m] of match.entries()) {
+					// null group, e.g. group #1 of `(a)?(b)` when matching against `b`
+					if (m == null) continue
+
 					const indices = match.indices![i]!
 					const [start] = indices
 					const end = start + m.length
