@@ -125,7 +125,7 @@ export class NormalizedMatcher extends Irregex {
 
 			for (const match of inputNormalized.matchAll(this.#matcher)) {
 				for (const [i, m] of match.entries()) {
-					// null group, e.g. group #1 of `(a)?(b)` when matching against `b`
+					// null group, e.g. group #1 of /(a)?(b)/ when matching against "b"
 					if (m == null) continue
 
 					const indices = match.indices![i]!
@@ -168,10 +168,17 @@ export class NormalizedMatcher extends Irregex {
 					}
 				}
 
-				for (const k of Object.keys(match.groups ?? {})) {
-					// no need to remap, as `indices.groups` correspond to, are reference-equal to, numbered
-					// `indices` entries
-					match.groups![k] = input.slice(...match.indices!.groups![k]!)
+				if (match.groups != null) {
+					for (const k of Object.keys(match.groups)) {
+						const v = match.groups[k]
+						// null group, e.g. group `a` of /(?<a>a)?(?<b>b)/ when matching against "b"
+						if (v == null) continue
+
+						// `match.indices.groups` are already remapped, as `indices.groups` are reference-equal to the
+						// corresponding numbered `indices` entries.
+						// See https://tc39.es/ecma262/multipage/text-processing.html#sec-makematchindicesindexpairarray
+						match.groups[k] = input.slice(...match.indices!.groups![k]!)
+					}
 				}
 
 				if (!this.#originalMatcherFlags.includes('d')) {

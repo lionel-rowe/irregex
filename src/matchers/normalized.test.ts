@@ -142,31 +142,42 @@ Deno.test(NormalizedMatcher.name, async (t) => {
 		}
 	})
 
-	await t.step('null group', () => {
-		const input = 'bbb'
+	await t.step('null groups', () => {
+		const input = '0!1!'
 
 		const matcher = new NormalizedMatcher({
 			normalizers: [
 				{
-					selector: /^\b$/g,
-					replacer: (x) => x[0],
+					selector: /\d!/g,
+					replacer: () => 'b',
 				},
 			],
-			matcher: /(a)?(b)/gd,
+			matcher: /(?<a>a)?(?<b>b)/gd,
 		})
 
 		assertEquals(
 			[...matcher[Symbol.matchAll](input)],
-			Array.from({ length: 3 }, (_, i) => {
+			Array.from({ length: 2 }, (_, i) => {
+				const m = `${i}!`
+				const index = i * 2
+				const indices = [index, index + 2]
 				const x: RegExpExecArray = Object.assign(
-					['b', undefined, 'b'] as string[] & { 0: string },
+					[m, undefined, m] as string[] & { 0: string },
 					{
-						groups: undefined,
-						index: i,
+						groups: Object.assign(Object.create(null), {
+							a: undefined,
+							b: m,
+						}),
+						index,
 						input,
 						indices: Object.assign(
-							[[i, i + 1], undefined, [i, i + 1]] as [number, number][],
-							{ groups: undefined },
+							[indices, undefined, indices] as [number, number][],
+							{
+								groups: Object.assign(Object.create(null), {
+									a: undefined,
+									b: indices,
+								}),
+							},
 						),
 					},
 				)
