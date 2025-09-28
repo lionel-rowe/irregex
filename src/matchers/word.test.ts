@@ -8,7 +8,7 @@ Deno.test(WordMatcher.name, async (t) => {
 		const replacer = '($<abbr>)'
 		const expected = '(Mon), (Tue), (Wed), (Thu), (Fri), (Sat), (Sun)'
 
-		for (let i = 0; i < 2; ++i) {
+		for (let i = 0; i < 3; ++i) {
 			assertEquals(matcher[Symbol.replace](input, replacer), expected)
 		}
 	})
@@ -17,7 +17,7 @@ Deno.test(WordMatcher.name, async (t) => {
 		const input = '此地无银三百两'
 		const expected = ['此地', '无', '银', '三百', '两']
 
-		for (let i = 0; i < 2; ++i) {
+		for (let i = 0; i < 3; ++i) {
 			assertEquals(matcher[Symbol.match](input), expected)
 		}
 	})

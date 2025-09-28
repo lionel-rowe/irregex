@@ -3,7 +3,7 @@ import { Irregex } from '../src/irregex.ts'
 
 class Irre extends Irregex {
 	re = /./g
-	override trackLastIndex = [this.re]
+	protected override trackLastIndex = [this.re]
 
 	protected override getMatch(str: string) {
 		return this.re.exec(str)

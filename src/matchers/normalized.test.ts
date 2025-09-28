@@ -1,6 +1,6 @@
 import dedent from 'string-dedent'
 import { assertEquals } from '@std/assert'
-import { NormalizedMatcher } from './normalized.ts'
+import { NormalizedMatcher, OffsetMap } from './normalized.ts'
 
 Deno.test(NormalizedMatcher.name, async (t) => {
 	await t.step('`g` and `d` flags', () => {
@@ -186,8 +186,6 @@ Deno.test(NormalizedMatcher.name, async (t) => {
 		)
 	})
 })
-
-const OffsetMap = NormalizedMatcher['OffsetMap']
 
 Deno.test(OffsetMap.name, () => {
 	const offsetMap = new OffsetMap([[2, 3], [4, 2], [10, 5]])

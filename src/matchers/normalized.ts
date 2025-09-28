@@ -17,12 +17,13 @@ type OffsetMapState = Readonly<{
 	increment: number
 }>
 
-class OffsetMap {
+/** @experimental */
+export class OffsetMap {
 	#cursor = 0
 	#increment = 0
 
 	#latestIncrement = 0
-	get latestIncrement() {
+	get latestIncrement(): number {
 		return this.#latestIncrement
 	}
 
@@ -45,7 +46,7 @@ class OffsetMap {
 		this.#increment = increment
 	}
 
-	remapToOriginal(offset: number) {
+	remapToOriginal(offset: number): number {
 		this.#latestIncrement = 0
 
 		for (; this.#cursor < this.offsets.length; ++this.#cursor) {
@@ -83,7 +84,7 @@ export class NormalizedMatcher extends Irregex {
 		return this.fromIter(input, function* () {
 			let replacementIncrement = 0
 
-			let offsetMap = new NormalizedMatcher.OffsetMap([])
+			let offsetMap = new OffsetMap([])
 			let inputNormalized = input
 
 			for (const { selector, replacer } of this.#normalizers) {
@@ -114,7 +115,7 @@ export class NormalizedMatcher extends Irregex {
 					}),
 				)
 
-				offsetMap = new NormalizedMatcher.OffsetMap([
+				offsetMap = new OffsetMap([
 					...offsetMap.offsets,
 					...offsets,
 				].sort(([a], [b]) => a - b))
@@ -193,6 +194,4 @@ export class NormalizedMatcher extends Irregex {
 			}
 		})
 	}
-
-	private static OffsetMap = OffsetMap
 }

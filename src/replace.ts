@@ -7,15 +7,17 @@ export type NativeReplacerFn = (substring: string, ...args: unknown[]) => string
  *
  * @example Index
  * ```ts
+ * import { assertEquals } from '@std/assert'
  * assertEquals(
- * 	'Hello world'.replace(/\w+/g, createReplacerFunction((m) => `${m.index}:${m[0]}`)),
+ * 	'Hello world'.replace(/\w+/g, convertReplacerFunction((m) => `${m.index}:${m[0]}`)),
  * 	'0:Hello 6:world',
  * )
  * ```
  * @example Named capture groups
  * ```ts
+ * import { assertEquals } from '@std/assert'
  * assertEquals(
- * 	'Hello world'.replace(/(?<initial>\w)\w+/g, createReplacerFunction((m) => m.groups!.initial)),
+ * 	'Hello world'.replace(/(?<initial>\w)\w+/g, convertReplacerFunction((m) => m.groups!.initial!)),
  * 	'H w',
  * )
  * ```

@@ -3,6 +3,7 @@ import { Irregex } from '../irregex.ts'
 
 export class PhysicalLineBoundaryMatcher extends Irregex {
 	colWidth: number
+	stringWidth = unicodeWidth
 
 	constructor(colWidth: number) {
 		super()
@@ -18,9 +19,8 @@ export class PhysicalLineBoundaryMatcher extends Irregex {
 				const rest = str.slice(prevLineBreak?.index ?? 0, m.index)
 				const line = rest.slice(rest.lastIndexOf('\n') + 1)
 
-				if (unicodeWidth(line) > this.colWidth) {
-					if (prevWordBreak != null) yield prevWordBreak
-					prevLineBreak = prevWordBreak
+				if (this.stringWidth(line) > this.colWidth && prevWordBreak != null) {
+					yield prevLineBreak = prevWordBreak
 				}
 
 				prevWordBreak = m

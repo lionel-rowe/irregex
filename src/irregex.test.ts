@@ -45,7 +45,7 @@ Deno.test('throw match', () => {
 
 	class ThrowMatcher extends Irregex {
 		#re = /./g
-		override trackLastIndex = [this.#re]
+		protected override trackLastIndex = [this.#re]
 
 		protected override getMatch(str: string) {
 			if (this.lastIndex) throw new ThrowMatcherError()
@@ -150,5 +150,42 @@ Deno.test('zero-length matches', async (t) => {
 			assertEquals(matches, 'XaXbXcX')
 			assertEquals(matcher.lastIndex, 0)
 		})
+	})
+
+	await t.step('fromIter iterated/cursor tracking of lastIndex', () => {
+		const ir = new (class extends Irregex {
+			#re = /./g
+			protected override trackLastIndex = [this.#re]
+			protected override getMatch(str: string) {
+				return this.fromIter(str, function* () {
+					for (const x of str.matchAll(this.#re)) {
+						yield x
+					}
+				})
+			}
+		})()
+
+		const str = 'abc'
+
+		const next = () => ir.exec(str)?.[0] ?? null
+
+		assertEquals(next(), 'a')
+		assertEquals(next(), 'b')
+		assertEquals(next(), 'c')
+		assertEquals(next(), null)
+
+		assertEquals(next(), 'a')
+		assertEquals(next(), 'b')
+		assertEquals(next(), 'c')
+		assertEquals(next(), null)
+
+		ir.lastIndex = 2
+		assertEquals(next(), 'c')
+		ir.lastIndex = 1
+		assertEquals(next(), 'b')
+		ir.lastIndex = 500
+		assertEquals(next(), null)
+		ir.lastIndex = 0
+		assertEquals(next(), 'a')
 	})
 })

@@ -1,4 +1,5 @@
 import { replaceValueToReplacer } from './replace.ts'
+import { binarySearch } from '@std/collections/unstable-binary-search'
 
 /**
  * A contract fulfilled by both `RegExp`s and `Irregex`s. The `Irregex` class implements these properties and methods of
@@ -61,7 +62,7 @@ export abstract class Irregex<T = unknown> implements IrregexCompatible {
 	 * A list of matchers that should have their `lastIndex` property kept in sync with the parent `Irregex`'s
 	 *  `lastIndex` property. Useful for keeping internally-used regexes (or other matchers) in sync.
 	 */
-	trackLastIndex?: Pick<Matcher, 'lastIndex'>[]
+	protected trackLastIndex?: { lastIndex: number }[]
 
 	exec(str: string): (RegExpExecArray & T) | null {
 		const match = this.getMatch(str)
@@ -69,11 +70,13 @@ export abstract class Irregex<T = unknown> implements IrregexCompatible {
 		return match
 	}
 
-	#lastCached?: {
-		input: string
+	static #MAX_CACHE_SIZE = 10
+	#lastCached = new Map<string, {
 		iterated: (RegExpExecArray & T)[]
 		iterator: Iterator<RegExpExecArray & T>
-	}
+		cursor: number
+		indices: number[]
+	}>()
 
 	/**
 	 * Convenience method for converting an iterator function to a match getter suitable for use with `getMatch`.
@@ -87,24 +90,61 @@ export abstract class Irregex<T = unknown> implements IrregexCompatible {
 		str: string,
 		getter: (this: this) => Iterable<RegExpExecArray & T>,
 	): (RegExpExecArray & T) | null {
-		if (this.#lastCached?.input !== str) {
+		let lastCached = this.#lastCached.get(str)
+
+		if (lastCached == null) {
 			const iterator = getter.call(this)[Symbol.iterator]()
 
-			this.#lastCached = {
-				input: str,
-				iterated: [],
-				iterator,
+			this.#lastCached.set(
+				str,
+				lastCached = {
+					iterated: [],
+					iterator,
+					cursor: 0,
+					indices: [],
+				},
+			)
+
+			if (this.#lastCached.size > Irregex.#MAX_CACHE_SIZE) {
+				this.#lastCached.delete(this.#lastCached.keys().next().value!)
 			}
 		}
 
-		for (const x of this.#lastCached.iterated) {
-			if (x.index >= this.lastIndex) return x
+		if (this.lastIndex === 0) lastCached.cursor = 0
+
+		// if we've already iterated past the current lastIndex, the result is already in the `iterated` array
+		if ((lastCached.iterated.at(-1)?.index ?? -1) >= this.lastIndex) {
+			// check after the cursor first (assuming usually iterated sequentially)
+			for (let i = lastCached.cursor; i < lastCached.iterated.length; ++i) {
+				const x = lastCached.iterated[i]!
+				const prev = lastCached.iterated[i - 1]
+				if (x.index >= this.lastIndex && (prev?.index ?? -1) < this.lastIndex) {
+					lastCached.cursor = i
+					return x
+				}
+			}
+
+			const { cursor } = lastCached
+			lastCached.cursor = 0
+
+			// const indices = lastCached.iterated.map(x=>x.index).slice(0, cursor)
+
+			// throw '!'
+
+			const i = binarySearch(
+				lastCached.indices.slice(0, cursor),
+				this.lastIndex,
+			)
+			return lastCached.iterated[i < 0 ? ~i : i]!
 		}
+
 		while (true) {
-			const next = this.#lastCached.iterator.next()
+			const next = lastCached.iterator.next()
 			if (next.done) return null
 			const x = next.value
-			this.#lastCached.iterated.push(x)
+
+			lastCached.cursor = lastCached.iterated.push(x) - 1
+			lastCached.indices.push(x.index)
 			if (x.index >= this.lastIndex) return x
 		}
 	}
